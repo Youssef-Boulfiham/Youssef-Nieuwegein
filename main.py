@@ -94,9 +94,68 @@ class Layer:
         cursor_color = (255, 0, 0)
         pygame.draw.ellipse(screen, cursor_color, cursor_rect)
 
+import pygame
+import time
+import random
+
+import pygame
+import time
+import random
+
+class Player:
+    def __init__(self, x, y, camera, speed):
+        self.image = pygame.image.load("graphics/Agent_front.png").convert_alpha()
+        self.x = x
+        self.y = y
+        self.camera = camera
+        self.speed = speed
+        self.last_move_time = time.time()  # Initialize the last move time
+
+        self.original_width = self.image.get_width()  # Original width of the agent image
+        self.original_height = self.image.get_height()  # Original height of the agent image
+
+    def wander(self):
+        """Move the agent randomly, respecting the 1-second interval and staying within bounds."""
+        current_time = time.time()
+        if current_time - self.last_move_time >= 1:  # 1-second interval
+            self.last_move_time = current_time  # Update the last move time
+
+            # Randomly pick a direction (dx, dy)
+            dx = random.choice([-1, 0, 1]) * self.speed
+            dy = random.choice([-1, 0, 1]) * self.speed
+
+            # Update position with boundary checks
+            new_x = self.x + dx
+            new_y = self.y + dy
+
+            # Ensure the agent stays within the 0 to 300 boundary for both x and y
+            if 0 <= new_x <= 300:
+                self.x = new_x
+            if 0 <= new_y <= 300:
+                self.y = new_y
+
+    def draw(self):
+        """Draw the player, scaling the image based on the zoom level."""
+        scale_factor = self.camera.zoom  # Get current zoom level
+        # Calculate the position based on zoom and camera offset
+        x_pos = self.x * scale_factor - self.camera.offset[0]
+        y_pos = self.y * scale_factor - self.camera.offset[1]
+
+        # Scale the agent image according to the zoom level
+        scaled_image = pygame.transform.scale(self.image,
+                                              (int(self.original_width * scale_factor),
+                                               int(self.original_height * scale_factor)))
+
+        # Blit the scaled agent image to the screen
+        screen.blit(scaled_image, (x_pos, y_pos))
+
+
+
+
 # Main Game Loop
 camera = Camera()
 layer = Layer(camera)
+player = Player(128, 32, camera, 32)
 running = True
 while running:
     screen.fill(BG_COLOR)
@@ -122,6 +181,9 @@ while running:
     # Draw Layers
     layer.draw_background()
     layer.draw_cursor()
+
+    player.wander()
+    player.draw()
 
     # Update Display
     pygame.display.flip()
