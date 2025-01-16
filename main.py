@@ -12,6 +12,7 @@ CURSOR_SIZE = 10  # Cursor size in pixels
 CURSOR_STEP = 10  # Cursor movement step size
 BG_COLOR = (30, 30, 30)
 BG_IMAGE = pygame.image.load("graphics/enviroment_easy.png")
+walls = [[32, 80], [64, 64], [96, 48], [129, 32], [160, 48], [192, 64], [224, 80], [256, 96], [32, 112], [64, 128], [256, 128], [224, 144], [192, 160], [160, 176], [128, 160]]
 
 # Map
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -94,52 +95,59 @@ class Layer:
         cursor_color = (255, 0, 0)
         pygame.draw.ellipse(screen, cursor_color, cursor_rect)
 
-import pygame
-import time
-import random
 
-import pygame
-import time
-import random
 
 class Player:
-    def __init__(self, x, y, camera, speed):
+    def __init__(self, x, y, camera, speed, walls):
         self.image = pygame.image.load("graphics/Agent_front.png").convert_alpha()
-        self.x = x
-        self.y = y
+        self.x = x  # Lower middle x-coordinate (adjusted)
+        self.y = y  # Lower middle y-coordinate (adjusted)
         self.camera = camera
         self.speed = speed
         self.last_move_time = time.time()  # Initialize the last move time
+        self.walls = walls  # List of wall coordinates
 
         self.original_width = self.image.get_width()  # Original width of the agent image
         self.original_height = self.image.get_height()  # Original height of the agent image
 
     def wander(self):
-        """Move the agent randomly, respecting the 1-second interval and staying within bounds."""
+        """Move the agent randomly, respecting walls and staying within bounds, with step size."""
         current_time = time.time()
         if current_time - self.last_move_time >= 1:  # 1-second interval
             self.last_move_time = current_time  # Update the last move time
 
-            # Randomly pick a direction (dx, dy)
-            dx = random.choice([-1, 0, 1]) * self.speed
-            dy = random.choice([-1, 0, 1]) * self.speed
+            # Define the step sizes for x and y
+            step_x = 32  # 32 pixels for horizontal movement
+            step_y = 16  # 16 pixels for vertical movement
 
-            # Update position with boundary checks
-            new_x = self.x + dx
-            new_y = self.y + dy
+            # Randomly pick a direction that moves both x and y
+            # Possible movements: Right-down, Left-down, Right-up, Left-up
+            directions = [(step_x, step_y), (-step_x, step_y), (step_x, -step_y), (-step_x, -step_y)]
+            random.shuffle(directions)  # Shuffle to try different directions randomly
 
-            # Ensure the agent stays within the 0 to 300 boundary for both x and y
-            if 0 <= new_x <= 300:
-                self.x = new_x
-            if 0 <= new_y <= 300:
-                self.y = new_y
+            for dx, dy in directions:
+                new_x = self.x + dx
+                new_y = self.y + dy
+
+                # Check if the new position is within bounds
+                if 0 <= new_x <= 300 and 0 <= new_y <= 300:
+                    # Check if the new position collides with a wall
+                    if [new_x, new_y] not in self.walls:
+                        self.x = new_x
+                        self.y = new_y
+                        break  # Exit the loop once a valid move is found
+                    else:
+                        # If the new position is blocked by a wall, print for debugging
+                        print(f"Blocked at {new_x}, {new_y}")
+            print(self.x, self.y)
 
     def draw(self):
         """Draw the player, scaling the image based on the zoom level."""
         scale_factor = self.camera.zoom  # Get current zoom level
-        # Calculate the position based on zoom and camera offset
-        x_pos = self.x * scale_factor - self.camera.offset[0]
-        y_pos = self.y * scale_factor - self.camera.offset[1]
+        # Calculate the position based on zoom, camera offset, and lower middle alignment
+        # The center of the image is at (x, y), we calculate the position accordingly
+        x_pos = (self.x - self.original_width // 2) * scale_factor - self.camera.offset[0]
+        y_pos = (self.y - self.original_height) * scale_factor - self.camera.offset[1]
 
         # Scale the agent image according to the zoom level
         scaled_image = pygame.transform.scale(self.image,
@@ -151,11 +159,10 @@ class Player:
 
 
 
-
 # Main Game Loop
 camera = Camera()
 layer = Layer(camera)
-player = Player(128, 32, camera, 32)
+player = Player(96, 80, camera, 32, walls)
 running = True
 while running:
     screen.fill(BG_COLOR)
