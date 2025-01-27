@@ -2,6 +2,7 @@ import time
 import pygame
 import sys
 import random
+import numpy as np  # Import NumPy for easier array handling
 
 from Objects.Player import Player
 
@@ -17,6 +18,16 @@ class Camera:
         self.image_player_width = self.image_player.get_width()  # Original width of the agent image
         self.image_player_height = self.image_player.get_height()  # Original height of the agent image
 
+        # Load the border data from the text file (assuming it's a space-separated text file)
+        self.borders = self.load_borders("objects/array.txt")
+
+    def load_borders(self, filename):
+        """Load the borders from the array text file."""
+        # Read the file and convert it into a 2D numpy array
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+            # Convert lines into a list of lists (2D array of integers)
+            return np.array([list(map(int, line.split())) for line in lines])
 
     def move_cursor(self, dx, dy):
         """Move the cursor and adjust camera offset."""
@@ -68,6 +79,22 @@ class Camera:
         bg_y = -self.offset[1]
         screen.blit(scaled_bg, (bg_x, bg_y))
 
+    def draw_borders(self):
+        """Draw the borders from the 2D array on top of the background."""
+        border_color = (255, 0, 0)  # Red color for borders
+
+        # Loop through the borders array and draw a red square for each border
+        for y in range(self.borders.shape[0]):
+            for x in range(self.borders.shape[1]):
+                if self.borders[y, x] == 0:  # Check if it's a border cell
+                    # Calculate the position on the screen based on the zoom and offset
+                    screen_x = x * self.zoom - self.offset[0]
+                    screen_y = y * self.zoom - self.offset[1]
+
+                    # Draw a small square for the border
+                    pygame.draw.rect(screen, border_color,
+                                     (screen_x, screen_y, self.zoom, self.zoom))
+
     def draw_cursor(self):
         """Draw the cursor as a red dot."""
         cursor_rect = pygame.Rect(
@@ -83,7 +110,6 @@ class Camera:
         """Draw the player, scaling the image based on the zoom level."""
         scale_factor = self.zoom  # Get current zoom level
         # Calculate the position based on zoom, camera offset, and lower middle alignment
-        # The center of the image is at (x, y), we calculate the position accordingly
         x_pos = (player_position_next[0] - self.image_player_width // 2) * scale_factor - self.offset[0]
         y_pos = (player_position_next[1] - self.image_player_height) * scale_factor - self.offset[1]
 
@@ -94,6 +120,7 @@ class Camera:
 
         # Blit the scaled agent image to the screen
         screen.blit(scaled_image, (x_pos, y_pos))
+
 
 # Main Game Loop
 WINDOW_WIDTH, WINDOW_HEIGHT = 300, 300  # Updated window size
@@ -108,6 +135,7 @@ BG_IMAGE = pygame.image.load("graphics/enviroment_easy.png")
 pygame.display.set_caption("Omgeving Simulatie")
 clock = pygame.time.Clock()
 running = True
+
 while running:
     screen.fill(BG_COLOR)
     for event in pygame.event.get():
@@ -126,11 +154,20 @@ while running:
         camera.zoom_out()
     if keys[pygame.K_2]:
         camera.zoom_in()
+
+    # Draw the background, borders, cursor, and player
     camera.draw_background()
+    # camera.draw_borders()  # Draw borders layer
     camera.draw_cursor()
-    player_position_next = player.step()
-    camera.draw_player(player_position_next)
+    player.step()
+    if not player.borders[tuple(player.position_current)]:
+        print(True)
+
+    camera.draw_player(player.position_current)
+
     pygame.display.flip()
-    clock.tick(30)
+    clock.tick(60)
+    # time.sleep(0.2)
+
 pygame.quit()
 sys.exit()
