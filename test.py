@@ -10,23 +10,22 @@ class Layer:
         # Initialize Pygame
         pygame.init()
 
-        # Load assets before running the simulation
+        # Load assets first to determine window size
         self.background = pygame.image.load("graphics/enviroment_large.png")
-        self.wide, self.height = self.background.get_size()
+        self.WINDOW_WIDTH, self.WINDOW_HEIGHT = self.background.get_size()  # Set window size to image size
+        self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
+        pygame.display.set_caption("Omgeving Simulatie")
+        self.clock = pygame.time.Clock()
+
+        # Load other assets
         self.image_player = pygame.image.load("graphics/Agent_front.png").convert_alpha()
         self.image_player_width, self.image_player_height = self.image_player.get_size()
         self.loaded_collisions = np.loadtxt("graphics/collision_layer.txt", dtype=int)
 
         # Constants
-        self.WINDOW_WIDTH, self.WINDOW_HEIGHT = self.wide, self.height
         self.CURSOR_SIZE = 10
         self.CURSOR_STEP = 10
         self.BG_COLOR = (30, 30, 30)
-
-        # Screen setup
-        self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
-        pygame.display.set_caption("Omgeving Simulatie")
-        self.clock = pygame.time.Clock()
 
         # Camera properties
         self.zoom = 1.0
@@ -36,17 +35,14 @@ class Layer:
 
         # Pathfinding setup
         self.star = Star()
-        self.start = (400, 100)
-        self.goal = (670, 150)
+        self.start = (400, 100)  # Starting position (y, x)
+        self.goal = (670, 150)   # Goal position (y, x)
 
         # Player setup
         self.player = Player(self)
         self.path = self.star.search_path(self.start, self.goal, self.loaded_collisions)
         if self.path:
             self.player.set_path(self.path)
-
-        # Start game loop
-        self.run()
 
     def move_cursor(self, dx, dy):
         self.cursor_pos[0] = max(0, min(self.WINDOW_WIDTH - self.CURSOR_SIZE, self.cursor_pos[0] + dx * self.CURSOR_STEP))
@@ -59,10 +55,10 @@ class Layer:
         self.clamp()
 
     def clamp(self):
-        max_offset_x = max(0, self.wide * self.zoom - self.WINDOW_WIDTH)
+        max_offset_x = max(0, self.WINDOW_WIDTH * self.zoom - self.WINDOW_WIDTH)
         self.offset[0] = max(0, min(self.offset[0], max_offset_x))
 
-        max_offset_y = max(0, self.height * self.zoom - self.WINDOW_HEIGHT)
+        max_offset_y = max(0, self.WINDOW_HEIGHT * self.zoom - self.WINDOW_HEIGHT)
         self.offset[1] = max(0, min(self.offset[1], max_offset_y))
 
     def zoom_in(self):
@@ -83,7 +79,7 @@ class Layer:
         self.clamp()
 
     def draw_background(self):
-        scaled_bg = pygame.transform.scale(self.background, (int(self.wide * self.zoom), int(self.height * self.zoom)))
+        scaled_bg = pygame.transform.scale(self.background, (int(self.WINDOW_WIDTH * self.zoom), int(self.WINDOW_HEIGHT * self.zoom)))
         bg_x = -self.offset[0]
         bg_y = -self.offset[1]
         self.screen.blit(scaled_bg, (bg_x, bg_y))
@@ -105,47 +101,11 @@ class Layer:
         scaled_image = pygame.transform.scale(self.image_player, (int(self.image_player_width * scale_factor), int(self.image_player_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
-    def run(self):
-        running = True
-        while running:
-            self.screen.fill(self.BG_COLOR)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_UP]:
-                self.move_cursor(0, -1)
-            if keys[pygame.K_DOWN]:
-                self.move_cursor(0, 1)
-            if keys[pygame.K_LEFT]:
-                self.move_cursor(-1, 0)
-            if keys[pygame.K_RIGHT]:
-                self.move_cursor(1, 0)
-            if keys[pygame.K_1]:
-                self.zoom_out()
-            if keys[pygame.K_2]:
-                self.zoom_in()
-
-            # Update player position along the path
-            self.player.step()
-
-            # Draw the background, cursor, and player
-            self.draw_background()
-            self.draw_cursor()
-            self.draw_player()
-
-            pygame.display.flip()
-            self.clock.tick(10)
-
-        pygame.quit()
-        sys.exit()
-
 
 class Player:
     def __init__(self, camera):
         self.camera = camera
-        self.position_current = [camera.WINDOW_WIDTH // 2, camera.WINDOW_HEIGHT // 2]
+        self.position_current = [camera.WINDOW_WIDTH // 2, camera.WINDOW_HEIGHT // 2]  # Start at center
         self.path = []
         self.current_path_index = 0
 
@@ -156,7 +116,7 @@ class Player:
     def step(self):
         if self.path and self.current_path_index < len(self.path):
             next_position = self.path[self.current_path_index]
-            self.position_current = [next_position[1], next_position[0]]
+            self.position_current = [next_position[1], next_position[0]]  # Swap y and x for pygame coordinates
             self.current_path_index += 1
 
 
@@ -189,3 +149,46 @@ class Star:
                     g_score[neighbor] = tentative_g
                     heapq.heappush(open_set, (tentative_g + self.heuristic(neighbor, goal), neighbor))
         return None
+
+
+def main():
+    pygame.init()
+    layer = Layer()
+
+    running = True
+    while running:
+        layer.screen.fill(layer.BG_COLOR)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            layer.move_cursor(0, -1)
+        if keys[pygame.K_DOWN]:
+            layer.move_cursor(0, 1)
+        if keys[pygame.K_LEFT]:
+            layer.move_cursor(-1, 0)
+        if keys[pygame.K_RIGHT]:
+            layer.move_cursor(1, 0)
+        if keys[pygame.K_1]:
+            layer.zoom_out()
+        if keys[pygame.K_2]:
+            layer.zoom_in()
+
+        # Update player position along the path
+        layer.player.step()
+
+        # Draw the background, cursor, and player
+        layer.draw_background()
+        layer.draw_cursor()
+        layer.draw_player()
+
+        pygame.display.flip()
+        layer.clock.tick(10)
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
