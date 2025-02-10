@@ -121,6 +121,48 @@ class Camera:
         # Blit the scaled agent image to the screen
         screen.blit(scaled_image, (x_pos, y_pos))
 
+        # --- New Part: Draw PNG and Text above player ---
+        # Coordinates above the player (adjust as needed)
+        text_x_pos = x_pos  # Align the text with the player (you can adjust this)
+        text_y_pos = y_pos - (10 + int(15 * scale_factor))  # Move the pop-up higher with zoom
+
+        # Load the small PNG image
+        sword_image = pygame.image.load("graphics/tree.png").convert_alpha()
+
+        # Scale the image if necessary (apply zoom scaling)
+        sword_image_width = int(10 * scale_factor)  # Scale the image width
+        sword_image_height = int(10 * scale_factor)  # Scale the image height
+        sword_image = pygame.transform.scale(sword_image, (sword_image_width, sword_image_height))
+
+        # Define the text font size based on zoom (it increases when zooming in)
+        font_size = max(10, int(10 * scale_factor))  # Ensure the font size doesn't go below 10
+        font = pygame.font.Font(None, font_size)  # Set font size dynamically
+        text = font.render("Some Text Here", True, (255, 255, 255))  # White text
+
+        # Define the padding around the text
+        padding = 5
+        text_width = text.get_width()
+        text_height = text.get_height()
+
+        # Background size (based on text size and image width)
+        background_width = sword_image_width + text_width + padding * 2
+        background_height = max(sword_image_height, text_height) + padding * 2
+
+        # Draw the background behind the pop-up (adjust for scaling and positioning)
+        background_rect = pygame.Rect(text_x_pos - sword_image_width - padding, text_y_pos, background_width,
+                                      background_height)
+        pygame.draw.rect(screen, (0, 0, 0), background_rect)  # Black background for pop-up with no transparency
+
+        # Vertical alignment: center the image and text in the background box
+        image_y_pos = text_y_pos + (background_height - sword_image_height) // 2  # Vertically center image
+        text_y_pos_centered = text_y_pos + (background_height - text_height) // 2  # Vertically center text
+
+        # Draw the sword image (adjust position to the left of the text)
+        screen.blit(sword_image, (text_x_pos - sword_image_width - padding, image_y_pos))  # Position left of text
+
+        # Draw the text next to the image
+        screen.blit(text, (text_x_pos, text_y_pos_centered))
+
 
 # Main Game Loop
 WINDOW_WIDTH, WINDOW_HEIGHT = 300, 300  # Updated window size
@@ -136,11 +178,13 @@ pygame.display.set_caption("Omgeving Simulatie")
 clock = pygame.time.Clock()
 running = True
 
+# Main Game Loop
 while running:
     screen.fill(BG_COLOR)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
     keys = pygame.key.get_pressed()
     if keys[pygame.K_UP]:
         camera.move_cursor(0, -1)
@@ -155,18 +199,20 @@ while running:
     if keys[pygame.K_2]:
         camera.zoom_in()
 
+    # Example for showing a popup when pressing 'P'
+    if keys[pygame.K_p]:
+        player.set_popup("Battle started! ⚔️")
+
     # Draw the background, borders, cursor, and player
     camera.draw_background()
-    # camera.draw_borders()  # Draw borders layer
     camera.draw_cursor()
     player.step()
-    if not player.borders[tuple(player.position_current)]:
-        print(True)
 
     camera.draw_player(player.position_current)
 
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(10)
+
     # time.sleep(0.2)
 
 pygame.quit()

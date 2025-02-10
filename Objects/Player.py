@@ -13,6 +13,8 @@ class Player:
         self.last_move_time = time.time()  # Initialize the last move time
         self.borders = np.loadtxt("Objects/array.txt", dtype=int)  # Load the borders map from a text file
         self.directions = np.array([[0, 0], [-8, 0], [8, 0], [0, -8], [0, 8]])
+        self.popup_text = None  # Text for popup above the player
+
 
     def step(self):
         directions_ = self.position_current + self.directions
@@ -25,6 +27,12 @@ class Player:
                     print("border", x, y)
         self.position_current = random.choice(directions)
         return 0
+
+    def set_popup(self, text):
+        self.popup_text = text
+
+    def clear_popup(self):
+        self.popup_text = None
 
     def __str__(self):
         return f"Player Position: {self.position_current}"
