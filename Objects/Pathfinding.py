@@ -2,12 +2,16 @@ import heapq
 
 
 class AStar:
+    def __init__(self):
+        pass
+
     def search_path(self, start, goal, collisions):
         open_set = []
         heapq.heappush(open_set, (0, start))
         came_from = {}
         g_score = {start: 0}
         f_score = {start: self.heuristic(start, goal)}
+
         while open_set:
             _, current = heapq.heappop(open_set)
             if current == goal:
@@ -17,6 +21,7 @@ class AStar:
                     current = came_from[current]
                 path.append(start)
                 return path[::-1]
+
             for neighbor in self.get_neighbors(current, collisions):
                 tentative_g_score = g_score[current] + 1
                 if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
@@ -24,6 +29,7 @@ class AStar:
                     g_score[neighbor] = tentative_g_score
                     f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
         return None
 
     @staticmethod
