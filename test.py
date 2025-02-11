@@ -4,45 +4,42 @@ import sys
 import numpy as np
 import heapq
 
-
 class Layer:
     def __init__(self):
-        # Initialize Pygame
         pygame.init()
 
-        # Load assets first to determine window size
-        self.background = pygame.image.load("graphics/enviroment_large.png")
-        self.WINDOW_WIDTH, self.WINDOW_HEIGHT = self.background.get_size()  # Set window size to image size
+        self.background = pygame.image.load("graphics/enviroment_large1.png")
+        self.WINDOW_WIDTH, self.WINDOW_HEIGHT = self.background.get_size()
         self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
         pygame.display.set_caption("Omgeving Simulatie")
         self.clock = pygame.time.Clock()
 
-        # Load other assets
         self.image_player = pygame.image.load("graphics/Agent_front.png").convert_alpha()
         self.image_player_width, self.image_player_height = self.image_player.get_size()
         self.loaded_collisions = np.loadtxt("graphics/collision_layer.txt", dtype=int)
 
-        # Constants
         self.CURSOR_SIZE = 10
         self.CURSOR_STEP = 10
         self.BG_COLOR = (30, 30, 30)
 
-        # Camera properties
         self.zoom = 1.0
         self.zoom_levels = [1.0, 2.0, 4.0]
         self.offset = [0, 0]
         self.cursor_pos = [self.WINDOW_WIDTH // 2, self.WINDOW_HEIGHT // 2]
 
-        # Pathfinding setup
         self.star = Star()
-        self.start = (400, 100)  # Starting position (y, x)
-        self.goal = (670, 150)   # Goal position (y, x)
+        self.start = (400, 100)
+        self.goal = (670, 150)
 
-        # Player setup
         self.player = Player(self)
         self.path = self.star.search_path(self.start, self.goal, self.loaded_collisions)
         if self.path:
             self.player.set_path(self.path)
+
+        # Initialize counters
+        self.current_step = 1  # Start at step 1
+        self.week_count = 1  # Start at Week 1
+        self.tick_counter = 0  # Track the number of ticks
 
     def move_cursor(self, dx, dy):
         self.cursor_pos[0] = max(0, min(self.WINDOW_WIDTH - self.CURSOR_SIZE, self.cursor_pos[0] + dx * self.CURSOR_STEP))
@@ -101,11 +98,20 @@ class Layer:
         scaled_image = pygame.transform.scale(self.image_player, (int(self.image_player_width * scale_factor), int(self.image_player_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
+    def draw_step_info(self):
+        font = pygame.font.Font(None, 36)
+        step_text = f"Step: {self.current_step}"
+        week_text = f"Week: {self.week_count}"
+        step_surface = font.render(step_text, True, (255, 255, 255))
+        week_surface = font.render(week_text, True, (255, 255, 255))
+        self.screen.blit(step_surface, (10, 10))
+        self.screen.blit(week_surface, (10, 50))
+
 
 class Player:
     def __init__(self, camera):
         self.camera = camera
-        self.position_current = [camera.WINDOW_WIDTH // 2, camera.WINDOW_HEIGHT // 2]  # Start at center
+        self.position_current = [camera.WINDOW_WIDTH // 2, camera.WINDOW_HEIGHT // 2]
         self.path = []
         self.current_path_index = 0
 
@@ -176,6 +182,17 @@ def main():
         if keys[pygame.K_2]:
             layer.zoom_in()
 
+        # Increment tick counter
+        layer.tick_counter += 1
+
+        # Increment step every tick
+        layer.current_step = layer.tick_counter
+
+        # Every 200 ticks, increment the week counter
+        if layer.tick_counter >= 200:
+            layer.tick_counter = 0  # Reset tick counter
+            layer.week_count += 1
+
         # Update player position along the path
         layer.player.step()
 
@@ -184,8 +201,11 @@ def main():
         layer.draw_cursor()
         layer.draw_player()
 
+        # Draw the step and week info
+        layer.draw_step_info()
+
         pygame.display.flip()
-        layer.clock.tick(10)
+        layer.clock.tick(30)
 
     pygame.quit()
 
