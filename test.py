@@ -205,7 +205,7 @@ def main():
         layer.draw_step_info()
 
         pygame.display.flip()
-        layer.clock.tick(30)
+        layer.clock.tick(10)
 
     pygame.quit()
 

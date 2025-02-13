@@ -2,43 +2,71 @@ import time
 import numpy as np
 import random
 
+from Objects.Pathfinding import AStar
+
 
 class Player:
 
-    def __init__(self, camera):
-        self.camera = camera
-        self.position_current = [100, 100]
-        self.position_next = [120, 120]
-        self.id = 0
-        self.last_move_time = time.time()  # Initialize the last move time
-        self.borders = np.loadtxt("Objects/array.txt", dtype=int)  # Load the borders map from a text file
-        self.directions = np.array([[0, 0], [-8, 0], [8, 0], [0, -8], [0, 8]])
-        self.popup_text = None  # Text for popup above the player
+    def __init__(self, position_start):
+        self.activity_current = "home"
+        self.activity_next = "school"
+        self.position_current = position_start
+        self.path = []
+        self.pathfinding = AStar()
+        self.message = "Hello World!"
+        self.step_sizes = [[0, 1], [1, 0], [-1, 0], [0, -1]]
+
+    def step(self, step_counter):
+
+        """
+        activiteit_next = thuis
+        activiteit_next = school
+
+        - na iedere 400 stappen
+            - ga naar de dichtsbijzjnde weg tussen bruin en zwart
 
 
-    def step(self):
-        directions_ = self.position_current + self.directions
+        """
+        colors = ["blue", "green"]
+        if not step_counter % 400:
+            # find path to the road
+            self.path += self.pathfinding.search_path(self.position_current,
+                                                      (670, 150),
+                                                      colors)
+            # find path to the school
+            self.path += self.pathfinding.search_path(self.path[-1],
+                                                      )
+            print(step_counter, len(self.path))
+        if not len(self.path):
+            self.step_idle()
+        # print(self.path[0])
+        self.position_current = tuple(self.path[0])
+        self.path.pop(0)
+
+    def step_idle(self):
+        directions_ = [list(map(sum, zip(self.position_current, step))) for step in self.step_sizes]
+
         directions = []
-        for x, y in directions_:
-            if 0 <= x < self.borders.shape[0] and 0 <= y < self.borders.shape[1]:
-                if self.borders[y, x]:
-                    directions.append([x, y])
-                else:
-                    print("border", x, y)
-        self.position_current = random.choice(directions)
-        return 0
-
-    def set_popup(self, text):
-        self.popup_text = text
-
-    def clear_popup(self):
-        self.popup_text = None
+        # for x, y in directions_:
+        #     if 0 <= x < self.pathfinding.collisions.shape[0] and 0 <= y < self.pathfinding.collisions.shape[1]:
+        #         if self.pathfinding.collisions[x, y]:
+        #             directions.append([x, y])
+        #         else:
+        #             print("border", x, y)
+        self.path.append(random.choice(directions_))
+        # self.path += random.choice(directions_.tolist())
 
     def __str__(self):
         return f"Player Position: {self.position_current}"
 
-
-# Example usage:
-camera = None  # Assuming camera is defined elsewhere
-player = Player(camera)
-print(player.step())  # Test the step function
+# def step_idle(self):
+#     directions_ = self.position_current + self.directions
+#     directions = []
+#     for x, y in directions_:
+#         if 0 <= x < self.borders.shape[0] and 0 <= y < self.borders.shape[1]:
+#             if self.borders[y, x]:
+#                 directions.append([x, y])
+#             else:
+#                 print("border", x, y)
+#     self.position_current = random.choice(directions)
+#     return 0
