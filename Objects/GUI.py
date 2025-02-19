@@ -8,7 +8,10 @@ class GUI:
     def __init__(self, player):
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
-        self.background = pygame.image.load("graphics/enviroment_large1.png")
+        self.background = pygame.image.load(
+            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/enviroment_activity.png")
+        self.background = pygame.image.load(
+            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/enviroment_background.png")
         self.width, self.height = self.background.get_size()
         self.screen = pygame.display.set_mode((self.width, self.height))
 
@@ -23,11 +26,10 @@ class GUI:
 
         # time
         self.clock = pygame.time.Clock()
-        step_counter = 0
 
         # player
-
-        self.image_player = pygame.image.load("graphics/Agent_front.png").convert_alpha()
+        self.image_player = pygame.image.load(
+            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/Agent_front.png").convert_alpha()
         self.image_player_width, self.image_player_height = self.image_player.get_size()
 
         # colors
@@ -42,6 +44,7 @@ class GUI:
             "white": (255, 255, 255)
         }
 
+        step_counter = 1
         running = True
         while running:
             for event in pygame.event.get():
@@ -60,14 +63,13 @@ class GUI:
                 self.zoom(1)
             if keys[pygame.K_2]:
                 self.zoom(-1)
-            # if layer.tick_counter >= 200:
-            #     layer.tick_counter = 0  # Reset tick counter
-            #     layer.week_count += 1
+            # elke n aantal stappen
+            if not step_counter % 1000:
+                player.set_activity_next()
+            else:
+                # wanneer player naar volgende activiteit moet
+                player.step()
 
-            # Update player position along the path
-            player.step(step_counter)
-
-            # Draw the background, cursor, and player
             self.draw_background()
             self.draw_cursor()
             self.draw_player(player.position_current)
@@ -135,7 +137,7 @@ class GUI:
         y_pos = (coordinates[0] - self.image_player_height) * scale_factor - self.cursor_offset[1]
         x_pos = (coordinates[1] - self.image_player_width // 2) * scale_factor - self.cursor_offset[0]
         scaled_image = pygame.transform.scale(self.image_player, (
-        int(self.image_player_width * scale_factor), int(self.image_player_height * scale_factor)))
+            int(self.image_player_width * scale_factor), int(self.image_player_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
     def draw_step_info(self):
