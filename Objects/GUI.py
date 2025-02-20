@@ -1,15 +1,10 @@
 from datetime import datetime, timedelta
-import time
-import pygame
-from PIL import Image
-
-
 import pygame
 import time
-from datetime import datetime, timedelta
+
 
 class GUI:
-    def __init__(self, player):
+    def __init__(self, player, start_date, end_date, steps_max):
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
 
@@ -25,8 +20,8 @@ class GUI:
         self.cursor_zoom = 1.0
         self.cursor_size = 10
         self.cursor_step = 10
-        self.cursor_color = (255, 0, 0)  # Red color for visibility
-        self.cursor_offset = [0, 0]  # Camera offset
+        self.cursor_color = (255, 0, 0)
+        self.cursor_offset = [0, 0]
 
         # Timing
         self.clock = pygame.time.Clock()
@@ -48,9 +43,14 @@ class GUI:
             "white": (255, 255, 255)
         }
 
-        self.step_counter = 1
-        date_start = datetime(2025, 1, 1)
-        self.date_current = date_start
+        self.step_counter = 0
+        self.date_current = start_date
+
+        # Time Scaling Variables
+        self.start_date = start_date
+        self.end_date = end_date
+        self.steps_max = steps_max
+        self.time_per_step = (end_date - start_date) / steps_max  # Time change per step
 
         running = True
         while running:
@@ -75,10 +75,11 @@ class GUI:
             # Player step update
             if not self.step_counter % 1000:
                 player.set_activity_next()
-                self.date_current += timedelta(days=7)
-            else:
-                player.step()
 
+            player.step()
+
+            # Update date based on time scaling
+            self.date_current = self.start_date + (self.time_per_step * self.step_counter)
 
             # Rendering
             self.draw_background()
@@ -149,7 +150,6 @@ class GUI:
         )
         pygame.draw.ellipse(self.screen, self.cursor_color, cursor_rect)
 
-
     def draw_player(self, coordinates):
         scale_factor = self.cursor_zoom
         y_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_player_height // 2
@@ -159,11 +159,11 @@ class GUI:
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
     def draw_step_info(self):
-        # Draw step information
+        """Draws step information including time progression."""
         date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
         font = pygame.font.Font(None, 36)
         step_text = f"Step: {self.step_counter}"
-        week_text = f"Week: {date_format}"
+        week_text = f"Date: {date_format}"
 
         step_surface = font.render(step_text, True, (255, 255, 255))
         week_surface = font.render(week_text, True, (255, 255, 255))
