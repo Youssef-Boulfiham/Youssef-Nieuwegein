@@ -32,6 +32,7 @@ class GUI:
         self.clock = pygame.time.Clock()
 
         # Player
+        self.player = player
         self.image_player = pygame.image.load(
             "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/Agent_front.png"
         ).convert_alpha()
@@ -83,7 +84,7 @@ class GUI:
             self.draw_background()
             self.draw_cursor()
             self.draw_player(player.position_current)
-            self.draw_textbox(player.position_current)
+            self.draw_textbox(player.position_current, f"{self.player.activity_current}")
             self.draw_step_info()
 
             pygame.display.flip()
@@ -179,18 +180,26 @@ class GUI:
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
 
-    def draw_textbox(self, player_position, text="Hello World!"):
-        # Draw textbox above player head with zoom scaling
-        font_size = max(10, int(36 * self.cursor_zoom))
-        font = pygame.font.Font(None, font_size)
+    def draw_textbox(self, player_position, text="None"):
+        # Use fixed font size and padding so the textbox stays constant on screen.
+        fixed_font_size = 36
+        font = pygame.font.Font(None, fixed_font_size)
         text_surface = font.render(text, True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
-        padding = int(5 * self.cursor_zoom)
-        box_width = text_width + padding * 2
-        box_height = text_height + padding * 2
+        fixed_padding = 5
+        box_width = text_width + fixed_padding * 2
+        box_height = text_height + fixed_padding * 2
 
-        box_x = (player_position[1] * self.cursor_zoom) - self.cursor_offset[0] - box_width // 2
-        box_y = (player_position[0] * self.cursor_zoom) - self.cursor_offset[1] - int(40 * self.cursor_zoom)
+        # Convert the player's world position to screen coordinates.
+        # Note: using player_position[1] for x and player_position[0] for y as in your original code.
+        screen_x = player_position[1] * self.cursor_zoom - self.cursor_offset[0]
+        screen_y = player_position[0] * self.cursor_zoom - self.cursor_offset[1]
 
+        # Position the textbox above the player's head.
+        # Here, we use a fixed vertical offset (e.g. 40 pixels) regardless of zoom.
+        box_x = screen_x - box_width // 2
+        box_y = screen_y - 40 - box_height  # Adjust 40 pixels above the head; modify as needed
+
+        # Draw the textbox background and then the text.
         pygame.draw.rect(self.screen, (0, 0, 0), (box_x, box_y, box_width, box_height))
-        self.screen.blit(text_surface, (box_x + padding, box_y + padding))
+        self.screen.blit(text_surface, (box_x + fixed_padding, box_y + fixed_padding))
