@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import random
-
+import pandas as pd
 from Objects.Pathfinding import AStar
 
 
@@ -11,6 +11,7 @@ from Objects.Pathfinding import AStar
 class Player:
 
     def __init__(self, position_start):
+        self.df = pd.read_csv('/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';')
         self.path = []
         self.position_current = position_start
         self.activity_current = "school"
