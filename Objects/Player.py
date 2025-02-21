@@ -15,9 +15,8 @@ class Player:
         self.path = []
         self.position_current = position_start
         self.activity_current = "school"
-        self.activities_free = ["school", "thuis"]
         self.nodes = []
-
+        #! dit worden nodes
         self.activities = {"thuis": [[250, 100]],
                            "school": [[530, 334]],
                            # "vrienden": [[]],
@@ -38,9 +37,43 @@ class Player:
         self.path.pop(0)
 
     def set_activity_next(self):
-        activity_next = random.choice(self.activities_free)  # volgende activiteit
-        position_next = random.choice(self.activities[activity_next])  # eindbestemming
-        self.path += self.Pathfinding.search_path(start=self.position_current,  # actuele positie
+        data = {
+            "ervaren gezondheid": [80],
+            "leeftijd": [0.53],
+            "geslacht": [0.54],
+            "roken": [0.03],
+            "alcohol": [0.04],
+            "softdrugs": [0.02],
+            "harddrugs": [0.01],
+            "thuis": [0.3],
+            "school": [0.4],
+            "vrienden": [0.1],
+            "vrije tijd": [0.2]
+        }
+        df = pd.DataFrame(data)
+
+        # Extract activities and their probabilities
+        activities = df.iloc[0, 7:9].to_dict()  # Select only activity columns
+        activity_names = list(activities.keys())
+        activity_probs = np.array(list(activities.values()))
+
+        # Normalize probabilities to sum to 1
+        activity_probs /= activity_probs.sum()
+
+        # Compute cumulative distribution function (CDF)
+        cumsum_activities = np.cumsum(activity_probs)
+
+        # Randomly select an activity
+        random_number = np.random.rand()  # Random number in [0, 1)
+
+        # Find the first index where random_number is less than the CDF
+        chosen_index = np.searchsorted(cumsum_activities, random_number)
+
+        # Output the selected activity
+        activity_next = activity_names[chosen_index]
+        print(f"Selected activity: {activity_next}")
+
+        self.path += self.Pathfinding.search_path(start=self.position_current,
                                                   goal=self.activities["weg_hart"],
                                                   allowed_colors=[self.activities_[self.activity_current], "black"])
         self.path += self.Pathfinding.search_path(start=self.activities["weg_hart"],
@@ -55,7 +88,7 @@ class Player:
         self.path.append(random.choice(directions_))
 
     def __str__(self):
-        return f"Player Position: {self.position_current}"
+        return f"{self.activity_current, len(self.path)}"
 
 # def step_idle(self):
 #     directions_ = self.position_current + self.directions

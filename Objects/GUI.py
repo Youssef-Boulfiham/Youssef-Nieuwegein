@@ -85,7 +85,7 @@ class GUI:
             self.draw_background()
             self.draw_cursor()
             self.draw_player(player.position_current)
-            self.draw_textbox(player.position_current, f"{self.player.activity_current}")
+            self.draw_textbox(player.position_current, f"{self.player}")
             self.draw_step_info()
 
             pygame.display.flip()
