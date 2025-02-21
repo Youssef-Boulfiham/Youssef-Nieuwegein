@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import pygame
 import time
+import matplotlib
 
 
 class GUI:

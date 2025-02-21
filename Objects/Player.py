@@ -3,6 +3,9 @@ import numpy as np
 import random
 import pandas as pd
 from Objects.Pathfinding import AStar
+import matplotlib
+matplotlib.use('Qt5Agg')
+import matplotlib.pyplot as plt
 
 
 # from Pathfinding import AStar
@@ -14,11 +17,11 @@ class Player:
         self.df = pd.read_csv('/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';', dtype=float)
         self.path = []
         self.position_current = position_start
-        self.activity_current = "school"
+        self.activity_current = "thuis"
         self.nodes = []
         #! dit worden nodes
         self.activities = {"thuis": [[250, 100]],
-                           "school": [[530, 334]],
+                           "school": [[600, 400]],
                            # "vrienden": [[]],
                            # "vrije tijd": [[]],
                            "weg_hart": [320, 90]}
@@ -53,9 +56,28 @@ class Player:
                                                   allowed_colors=["black", self.activities_[activity_next]])
         self.activity_current = activity_next
 
+    def get_random_point_in_activity_zone(self, allowed_colors):
+        self.Pathfinding.get_collision_layer(allowed_colors)
+        collisions = np.loadtxt(f"{allowed_colors}.txt", dtype=int)
+        print(collisions.shape)
+        height, width = collisions.shape
+        while True:
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            if collisions[y, x] == 0:
+                return y, x
+
     def step_idle(self):
-        directions_ = [list(map(sum, zip(self.position_current, step))) for step in self.step_sizes]
-        self.path.append(random.choice(directions_))
+        allowed_colors = [self.activities_[self.activity_current]]
+        random_point = self.get_random_point_in_activity_zone(allowed_colors)
+        print(self.position_current, random_point, allowed_colors)
+        self.path = self.Pathfinding.search_path(start=self.position_current,
+                                                 goal=random_point,
+                                                 allowed_colors=allowed_colors)
+
+    # def step_idle(self):
+    #     directions_ = [list(map(sum, zip(self.position_current, step))) for step in self.step_sizes]
+    #     self.path.append(random.choice(directions_))
 
     def __str__(self):
         return f"{self.activity_current, len(self.path)}"
