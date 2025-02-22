@@ -73,7 +73,8 @@ class AStar:
             "grey": (128, 128, 128),
             "green": (41, 161, 39),
             "brown": (143, 110, 26),
-            "red": (255, 0, 0)
+            "red": (255, 0, 0),
+            "red dark": (155, 0, 0)
         }
         allowed_colors_rgb = [colors[color] for color in allowed_colors]
         image = Image.open(
