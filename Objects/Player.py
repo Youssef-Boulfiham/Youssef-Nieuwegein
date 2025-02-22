@@ -16,13 +16,13 @@ class Player:
         self.activity_current = "thuis"
         self.nodes = []
         self.activities_coordinates = {"thuis": [[250, 100]],
-                                       "school": [[600, 400]],
-                                       "vriend thuis": [[380, 250]]}#,
-                                       # "vrije tijd": [[]]}
+                                       "school": [[260, 330]],
+                                       "vriend thuis": [[380, 250]],
+                                       "vrije tijd": [[600, 400]],
+                                       "vrije tijd ongeorganiseerd": [[380, 250]]}
         self.activities_colors = {"thuis": "red",
                                   "school": "blue",
-                                  "back_alley": "",
-                                  "vrije tijd": "groen",
+                                  "vrije tijd": "green",
                                   "vriend thuis": "red dark"}
         self.Pathfinding = AStar()
         self.prompt = ""
@@ -34,7 +34,8 @@ class Player:
         self.path.pop(0)
 
     def set_activity_next(self):
-        activities = self.df.iloc[0, 7:10].to_dict()
+        self.path = []
+        activities = self.df.iloc[0, 7:].to_dict()
         activity_names = list(activities.keys())
         activity_probs = np.array(list(activities.values()))
         activity_probs /= activity_probs.sum()

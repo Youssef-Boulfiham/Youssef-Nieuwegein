@@ -39,7 +39,7 @@ class AStar:
                     f_score[neighbor_tuple] = tentative_g_score + self.heuristic(neighbor, goal)
                     heapq.heappush(open_set, (f_score[neighbor_tuple], neighbor_tuple))
 
-        print("No path")
+        print("No path", allowed_colors)
         return [list(start)]
 
     @staticmethod
@@ -71,7 +71,7 @@ class AStar:
             "blue": (0, 0, 255),
             "black": (0, 0, 0),
             "grey": (128, 128, 128),
-            "green": (41, 161, 39),
+            "green": (0, 255, 0),
             "brown": (143, 110, 26),
             "red": (255, 0, 0),
             "red dark": (155, 0, 0)
