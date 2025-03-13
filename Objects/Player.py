@@ -3,35 +3,40 @@ import random
 import pandas as pd
 from Objects.Pathfinding import AStar
 # from Pathfinding import AStar
-
+import ast
 
 class Player:
 
     def __init__(self):
+        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
+
         self.df = pd.read_csv(
             '/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';',
             dtype=float)
         self.path = []
         self.activity_current = "thuis"
         self.Pathfinding = AStar()
-        self.position_current = self.get_random_point_in_activity_zone(["red"])
-        self.nodes = []
-        self.activities_coordinates = {"thuis": [[250, 100]],
-                                       "school": [[260, 330]],
-                                       "vriend thuis": [[380, 250]],
-                                       "vrije tijd": [[600, 400]],
-                                       "vrije tijd ongeorganiseerd": [[380, 250]]}
         self.activities_colors = {"thuis": "red",
                                   "school": "blue",
                                   "vrije tijd": "green",
                                   "vriend thuis": "red dark"}
+        self.position_current = (250, 100)
+        self.nodes = []
         self.prompt = ""
 
-    def step(self):
+    def step(self, activity_next=False):
+        if activity_next:
+            self.set_activity_next()
         if not len(self.path):
             self.step_idle()
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
+
+    def get_position_valid(self):
+        file = self.root + f"Data/positions/{self.activities_colors[self.activity_current]}.txt"
+        with open(file, "r") as file:
+            positions_valid = ast.literal_eval(file.read())
+            return random.choice(positions_valid)[::-1]
 
     def set_activity_next(self):
         self.path = []
@@ -42,36 +47,18 @@ class Player:
         cumsum_activities = np.cumsum(activity_probs)
         random_number = np.random.rand()
         chosen_index = np.searchsorted(cumsum_activities, random_number)
-        activity_next = activity_names[chosen_index]
+        activity_previous = self.activity_current
+        self.activity_current = activity_names[chosen_index]
         self.path += self.Pathfinding.search_path(start=self.position_current,
-                                                  goal=random.choice(self.activities_coordinates[activity_next]),
-                                                  allowed_colors=[self.activities_colors[self.activity_current],
+                                                  goal=self.get_position_valid(),
+                                                  allowed_colors=[self.activities_colors[activity_previous],
                                                                   "black",
-                                                                  self.activities_colors[activity_next]])
-        self.activity_current = activity_next
+                                                                  self.activities_colors[self.activity_current]])
 
-    def get_random_point_in_activity_zone(self, allowed_colors):
-        self.Pathfinding.get_collision_layer(allowed_colors)
-        collisions = np.loadtxt(f"{allowed_colors}.txt", dtype=int)
-        height, width = collisions.shape
-        while True:
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
-            if collisions[y, x] == 0:
-                return y, x
 
     def step_idle(self):
-        """
-        Let op!: kans op contact, hier/hiervoor initieren.
-        :param:
-            - kleur activity current
-            !-
-
-        :return:
-            x, y
-        """
         allowed_colors = [self.activities_colors[self.activity_current]]
-        random_point = self.get_random_point_in_activity_zone(allowed_colors)
+        random_point = self.get_position_valid()
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  goal=random_point,
                                                  allowed_colors=allowed_colors)

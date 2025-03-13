@@ -1,61 +1,53 @@
 import numpy as np
-from datetime import datetime, timedelta
 import pygame
 import time
-import matplotlib
+from PIL import Image
 
 
 class GUI:
     def __init__(self, players, start_date, end_date, steps_max):
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
-        pygame.init()
-        pygame.display.set_caption("Omgeving Simulatie")
-
-        self.background = pygame.image.load(
-            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/enviroment_background.png"
-        )
-        self.width, self.height = self.background.get_size()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-
-        self.cursor_position = [self.width // 2, self.height // 2]
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
         self.cursor_size = 10
         self.cursor_step = 10
         self.cursor_color = (255, 0, 0)
         self.cursor_offset = [0, 0]
-
-        self.clock = pygame.time.Clock()
-
         self.players = players
-        self.image_player = pygame.image.load(
-            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/Agent_front.png"
-        ).convert_alpha()
-        self.image_player_width, self.image_player_height = self.image_player.get_size()
-
         self.colors = {
-            "blue": (30, 49, 227),
             "black": (0, 0, 0),
+            "white": (255, 255, 255),
+            "red": (255, 0, 0),
+            "green": (0, 255, 0),
+            "blue": (0, 0, 255),
             "grey": (128, 128, 128),
-            "green": (41, 161, 39),
             "brown": (143, 110, 26),
-            "white": (255, 255, 255)
+            "red dark": (155, 0, 0)
         }
-
         self.step_counter = 0
         self.date_current = start_date
-
         self.start_date = start_date
         self.end_date = end_date
         self.steps_max = steps_max
         self.time_per_step = (end_date - start_date) / steps_max
-        self.bar()
+        self.set_collision_sprite()
+        self.set_positions_valid()
+        #
+        pygame.init()
+        pygame.display.set_caption("Omgeving Simulatie")
+        self.background = pygame.image.load(self.root + "graphics/enviroment_background.png")
+        self.width, self.height = self.background.get_size()
+        self.cursor_position = [self.width // 2, self.height // 2]
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.image_player = pygame.image.load(self.root + "graphics/Agent_front.png").convert_alpha()
+        self.clock = pygame.time.Clock()
+        self.image_player_width, self.image_player_height = self.image_player.get_size()
+        #
         running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-
             keys = pygame.key.get_pressed()
             if keys[pygame.K_UP]:
                 self.move_cursor(0, -1)
@@ -69,28 +61,24 @@ class GUI:
                 self.zoom(1)
             if keys[pygame.K_2]:
                 self.zoom(-1)
-
-            next_activity = False
+            #
+            activity_next = False
             for player in self.players:
                 if not self.step_counter % 1000:
-                    next_activity = True
-                player.step(next_activity)
-
+                    activity_next = True
+                player.step(activity_next)
             self.date_current = self.start_date + (self.time_per_step * self.step_counter)
-
+            # draw
             self.draw_background()
             self.draw_cursor()
             for player in self.players:
                 self.draw_player(player.position_current)
                 self.draw_textbox(player.position_current, f"{player}")
             self.draw_step_info()
-
             pygame.display.flip()
             self.clock.tick(60)
             self.step_counter += 1
-
         pygame.quit()
-
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
@@ -182,7 +170,7 @@ class GUI:
         # Use fixed font size and padding so the textbox stays constant on screen.
         fixed_font_size = 36
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(text, True, (255, 255, 255))
+        text_surface = font.render("", True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
         fixed_padding = 5
         box_width = text_width + fixed_padding * 2
@@ -202,11 +190,42 @@ class GUI:
         pygame.draw.rect(self.screen, (0, 0, 0), (box_x, box_y, box_width, box_height))
         self.screen.blit(text_surface, (box_x + fixed_padding, box_y + fixed_padding))
 
-    def bar(self):
+    def set_collision_sprite(self):
+        colors_possible = [['red'],['green'], ['blue'], ['red dark'],
+                           ['red', 'black', 'red'],
+                           ['red', 'black', 'green'],
+                           ['red', 'black', 'blue'],
+                           ['red', 'black', 'red dark'],
+                           ['green', 'black', 'red'],
+                           ['green', 'black', 'green'],
+                           ['green', 'black', 'blue'],
+                           ['green', 'black', 'red dark'],
+                           ['blue', 'black', 'red'],
+                           ['blue', 'black', 'green'],
+                           ['blue', 'black', 'blue'],
+                           ['blue', 'black', 'red dark'],
+                           ['red dark', 'black', 'red'],
+                           ['red dark', 'black', 'green'],
+                           ['red dark', 'black', 'blue'],
+                           ['red dark', 'black', 'red dark']]
+
+        for i in colors_possible:
+            colors_rgb = [self.colors[color] for color in i]
+            image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
+            width, height = image.size
+            pixels = image.load()
+            collision_layer = np.zeros((height, width), dtype=int)
+            for y in range(height):
+                for x in range(width):
+                    if pixels[x, y] not in colors_rgb:
+                        collision_layer[y, x] = 1  # Block the color
+            np.savetxt(f"{self.root + "Data/collisions/"}{i}.txt", collision_layer, fmt='%d')
+
+    def set_positions_valid(self):
         for i in ["red", "green", "blue", "red dark"]:
-            layer_collision = np.loadtxt(self.root + f"Data/layer_collision/['{i}'].txt", dtype=int)
+            layer_collision = np.loadtxt(self.root + f"Data/collisions/['{i}'].txt", dtype=int)
             positions_valid = [(j, i) for i in range(layer_collision.shape[0]) for j in range(layer_collision.shape[1])
                                if not layer_collision[i, j]]
-            with open(self.root + f"Data/positions_valid/{i}.txt", "w") as file:
+            #
+            with open(self.root + f"Data/positions/{i}.txt", "w") as file:
                 file.write(str(positions_valid))
-            print(len(positions_valid))

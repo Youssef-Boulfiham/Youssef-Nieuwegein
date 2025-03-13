@@ -1,7 +1,6 @@
 import heapq
 
 import numpy as np
-from PIL import Image
 # Let op!: current position moet tuple zijn
 
 class AStar:
@@ -10,8 +9,11 @@ class AStar:
 
     def search_path(self, start, goal, allowed_colors):
         # get collisions
-        self.get_collision_layer(allowed_colors)
-        collisions = np.loadtxt(f"{allowed_colors}.txt", dtype=int)
+        # self.get_collision_layer(allowed_colors)
+        file = ("/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/collisions/" +
+                f"{allowed_colors}.txt")
+
+        collisions = np.loadtxt(file, dtype=int)
 
         open_set = []
         heapq.heappush(open_set, (0, tuple(start)))  # Convert start to tuple
@@ -57,34 +59,3 @@ class AStar:
             if 0 <= ny < height and 0 <= nx < width and collisions[ny, nx] == 0:
                 neighbors.append([ny, nx])  # Keep neighbors as lists
         return neighbors
-
-    @staticmethod
-    def get_collision_layer(allowed_colors):
-        """
-        "blue": (30, 49, 227),
-        "black": (0, 0, 0),
-        "grey": (128, 128, 128),
-        "green": (41, 161, 39),
-        "brown": (143, 110, 26)
-        """
-        colors = {
-            "blue": (0, 0, 255),
-            "black": (0, 0, 0),
-            "grey": (128, 128, 128),
-            "green": (0, 255, 0),
-            "brown": (143, 110, 26),
-            "red": (255, 0, 0),
-            "red dark": (155, 0, 0)
-        }
-        allowed_colors_rgb = [colors[color] for color in allowed_colors]
-        image = Image.open(
-            "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/enviroment_activity.png").convert(
-            "RGB")
-        width, height = image.size
-        pixels = image.load()
-        collision_layer = np.zeros((height, width), dtype=int)
-        for y in range(height):
-            for x in range(width):
-                if pixels[x, y] not in allowed_colors_rgb:
-                    collision_layer[y, x] = 1  # Block the color
-        np.savetxt(f"{allowed_colors}.txt", collision_layer, fmt='%d')
