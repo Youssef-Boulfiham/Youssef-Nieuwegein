@@ -2,7 +2,7 @@ import heapq
 
 import numpy as np
 from PIL import Image
-
+# Let op!: current position moet tuple zijn
 
 class AStar:
     def __init__(self):

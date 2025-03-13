@@ -5,7 +5,7 @@ import matplotlib
 
 
 class GUI:
-    def __init__(self, player, start_date, end_date, steps_max):
+    def __init__(self, players, start_date, end_date, steps_max):
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
 
@@ -15,7 +15,6 @@ class GUI:
         self.width, self.height = self.background.get_size()
         self.screen = pygame.display.set_mode((self.width, self.height))
 
-        # Cursor properties
         self.cursor_position = [self.width // 2, self.height // 2]
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
@@ -24,17 +23,14 @@ class GUI:
         self.cursor_color = (255, 0, 0)
         self.cursor_offset = [0, 0]
 
-        # Timing
         self.clock = pygame.time.Clock()
 
-        # Player
-        self.player = player
+        self.players = players
         self.image_player = pygame.image.load(
             "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/graphics/Agent_front.png"
         ).convert_alpha()
         self.image_player_width, self.image_player_height = self.image_player.get_size()
 
-        # Colors
         self.colors = {
             "blue": (30, 49, 227),
             "black": (0, 0, 0),
@@ -47,11 +43,10 @@ class GUI:
         self.step_counter = 0
         self.date_current = start_date
 
-        # Time Scaling Variables
         self.start_date = start_date
         self.end_date = end_date
         self.steps_max = steps_max
-        self.time_per_step = (end_date - start_date) / steps_max  # Time change per step
+        self.time_per_step = (end_date - start_date) / steps_max
 
         running = True
         while running:
@@ -73,20 +68,18 @@ class GUI:
             if keys[pygame.K_2]:
                 self.zoom(-1)
 
-            # Player step update
-            if not self.step_counter % 1000:
-                player.set_activity_next()
+            for player in self.players:
+                if not self.step_counter % 1000:
+                    player.set_activity_next()
+                player.step()
 
-            player.step()
-
-            # Update date based on time scaling
             self.date_current = self.start_date + (self.time_per_step * self.step_counter)
 
-            # Rendering
             self.draw_background()
             self.draw_cursor()
-            self.draw_player(player.position_current)
-            self.draw_textbox(player.position_current, f"{self.player}")
+            for player in self.players:
+                self.draw_player(player.position_current)
+                self.draw_textbox(player.position_current, f"{player}")
             self.draw_step_info()
 
             pygame.display.flip()
@@ -94,6 +87,7 @@ class GUI:
             self.step_counter += 1
 
         pygame.quit()
+
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
