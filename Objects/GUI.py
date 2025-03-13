@@ -166,11 +166,11 @@ class GUI:
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
 
-    def draw_textbox(self, player_position, text="None"):
+    def draw_textbox(self, player_position, text=""):
         # Use fixed font size and padding so the textbox stays constant on screen.
         fixed_font_size = 36
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render("", True, (255, 255, 255))
+        text_surface = font.render(text, True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
         fixed_padding = 5
         box_width = text_width + fixed_padding * 2

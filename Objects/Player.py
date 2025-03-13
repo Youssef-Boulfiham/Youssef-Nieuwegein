@@ -14,7 +14,7 @@ class Player:
         self.df = pd.read_csv(
             '/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';',
             dtype=float)
-        self.color_positions = self.get_positions()
+        self.color_positions = self.set_positions()
         self.path = []
         self.activity_current = "thuis"
         self.Pathfinding = AStar()
@@ -30,22 +30,17 @@ class Player:
         if activity_next:
             self.set_activity_next()
         if not len(self.path):
-            self.step_idle()
+            self.idle()
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
 
-    def get_position_valid(self):
-        """Retourneer een willekeurige positie voor de huidige activiteit."""
-        return random.choice(self.color_positions[self.activities_colors[self.activity_current]])[::-1]
-
-    def get_position_position(self):
-        file = self.root + f"Data/positions/{self.activities_colors[self.activity_current]}.txt"
-        with open(file, "r") as file:
-            positions_valid = ast.literal_eval(file.read())
-        x_curr, y_curr = self.position_current
-        positions_nearby = [pos for pos in positions_valid if abs(pos[0] - x_curr) <= 10 and abs(pos[1] - y_curr) <= 10]
-        if positions_nearby:
-            return random.choice(positions_nearby)[::-1]  # Omdraaien zoals in originele functie
+    def get_position(self):
+        color = self.activities_colors[self.activity_current]
+        x, y = self.position_current
+        positions_nearby = [pos for pos in self.color_positions[color] if abs(pos[0] - x) <= 10 and abs(pos[1] - y) <= 10]
+        if not positions_nearby or color == "green":
+            return random.choice(self.color_positions[color])[::-1]
+        return random.choice(positions_nearby)
 
     def set_activity_next(self):
         self.path = []
@@ -59,21 +54,20 @@ class Player:
         activity_previous = self.activity_current
         self.activity_current = activity_names[chosen_index]
         self.path += self.Pathfinding.search_path(start=self.position_current,
-                                                  goal=self.get_position_valid(),
+                                                  goal=self.get_position(),
                                                   allowed_colors=[self.activities_colors[activity_previous],
                                                                   "black",
                                                                   self.activities_colors[self.activity_current]])
 
 
-    def step_idle(self):
-        allowed_colors = [self.activities_colors[self.activity_current]]
-        random_point = self.get_position_valid()
+    def idle(self):
+        positons_next = self.get_position()
         self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                 goal=random_point,
-                                                 allowed_colors=allowed_colors)
+                                                 goal=positons_next,
+                                                 allowed_colors=[self.activities_colors[self.activity_current]])
 
-    def get_positions(self):
-        """Laad alle posities van alle activiteiten in een cache."""
+
+    def set_positions(self):
         positions = {}
         for color in ['red','green', 'blue', 'red dark']:
             file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
