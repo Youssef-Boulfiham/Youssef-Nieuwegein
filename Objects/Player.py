@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import random
 import pandas as pd
@@ -13,6 +14,7 @@ class Player:
         self.df = pd.read_csv(
             '/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';',
             dtype=float)
+        self.color_positions = self.get_positions()
         self.path = []
         self.activity_current = "thuis"
         self.Pathfinding = AStar()
@@ -33,10 +35,17 @@ class Player:
         self.path.pop(0)
 
     def get_position_valid(self):
+        """Retourneer een willekeurige positie voor de huidige activiteit."""
+        return random.choice(self.color_positions[self.activities_colors[self.activity_current]])[::-1]
+
+    def get_position_position(self):
         file = self.root + f"Data/positions/{self.activities_colors[self.activity_current]}.txt"
         with open(file, "r") as file:
             positions_valid = ast.literal_eval(file.read())
-            return random.choice(positions_valid)[::-1]
+        x_curr, y_curr = self.position_current
+        positions_nearby = [pos for pos in positions_valid if abs(pos[0] - x_curr) <= 10 and abs(pos[1] - y_curr) <= 10]
+        if positions_nearby:
+            return random.choice(positions_nearby)[::-1]  # Omdraaien zoals in originele functie
 
     def set_activity_next(self):
         self.path = []
@@ -62,6 +71,16 @@ class Player:
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  goal=random_point,
                                                  allowed_colors=allowed_colors)
+
+    def get_positions(self):
+        """Laad alle posities van alle activiteiten in een cache."""
+        positions = {}
+        for color in ['red','green', 'blue', 'red dark']:
+            file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+            with open(file_path, "r") as file:
+                positions_valid = ast.literal_eval(file.read())
+                positions[color] = positions_valid
+        return positions
 
     def __str__(self):
         return str(f"{self.activity_current, len(self.path)}")
