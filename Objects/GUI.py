@@ -1,3 +1,4 @@
+import numpy as np
 from datetime import datetime, timedelta
 import pygame
 import time
@@ -6,6 +7,7 @@ import matplotlib
 
 class GUI:
     def __init__(self, players, start_date, end_date, steps_max):
+        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
 
@@ -47,7 +49,7 @@ class GUI:
         self.end_date = end_date
         self.steps_max = steps_max
         self.time_per_step = (end_date - start_date) / steps_max
-
+        self.bar()
         running = True
         while running:
             for event in pygame.event.get():
@@ -68,10 +70,11 @@ class GUI:
             if keys[pygame.K_2]:
                 self.zoom(-1)
 
+            next_activity = False
             for player in self.players:
                 if not self.step_counter % 1000:
-                    player.set_activity_next()
-                player.step()
+                    next_activity = True
+                player.step(next_activity)
 
             self.date_current = self.start_date + (self.time_per_step * self.step_counter)
 
@@ -198,3 +201,12 @@ class GUI:
         # Draw the textbox background and then the text.
         pygame.draw.rect(self.screen, (0, 0, 0), (box_x, box_y, box_width, box_height))
         self.screen.blit(text_surface, (box_x + fixed_padding, box_y + fixed_padding))
+
+    def bar(self):
+        for i in ["red", "green", "blue", "red dark"]:
+            layer_collision = np.loadtxt(self.root + f"Data/layer_collision/['{i}'].txt", dtype=int)
+            positions_valid = [(j, i) for i in range(layer_collision.shape[0]) for j in range(layer_collision.shape[1])
+                               if not layer_collision[i, j]]
+            with open(self.root + f"Data/positions_valid/{i}.txt", "w") as file:
+                file.write(str(positions_valid))
+            print(len(positions_valid))
