@@ -14,3 +14,4 @@ players = [Player() for _ in range(number_of_players)]
 
 if __name__ == "__main__":
     game = GUI(players, date_start, date_end, steps_max)
+a=0
