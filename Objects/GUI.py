@@ -30,6 +30,7 @@ class GUI:
         self.end_date = end_date
         self.steps_max = steps_max
         self.time_per_step = (end_date - start_date) / steps_max
+        # init
         self.set_collision_sprite()
         self.set_positions_valid()
         [player.set_positions() for player in self.players]
