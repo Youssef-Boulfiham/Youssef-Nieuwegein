@@ -19,12 +19,14 @@ class Player:
         self.activity_current = "thuis"
         self.Pathfinding = AStar()
         self.activities_colors = {"thuis": "red",
-                                  "school": "blue",
-                                  "vrije tijd": "green",
+                                  "school": "green",
+                                  "vrije tijd": "blue",
                                   "vriend thuis": "red dark"}
         self.position_current = (250, 100)
         self.nodes = []
         self.prompt = ""
+
+
 
     def step(self, activity_next=False):
         if activity_next:
@@ -34,13 +36,30 @@ class Player:
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
 
+    def idle(self):
+        positons_next = self.get_position()
+        self.path = self.Pathfinding.search_path(start=self.position_current,
+                                                 goal=positons_next,
+                                                 allowed_colors=[self.activities_colors[self.activity_current]])
+
     def get_position(self):
-        color = self.activities_colors[self.activity_current]
+        color_current = self.activities_colors[self.activity_current]
         x, y = self.position_current
-        positions_nearby = [pos for pos in self.color_positions[color] if abs(pos[0] - x) <= 10 and abs(pos[1] - y) <= 10]
-        if not positions_nearby or color == "green":
-            return random.choice(self.color_positions[color])[::-1]
-        return random.choice(positions_nearby)
+        positions = np.random.permutation(self.color_positions[color_current])
+        positions_nearby = [pos for pos in positions if abs(pos[0] - x) <= 10 and abs(pos[1] - y) <= 10]
+        if not positions_nearby or color_current == "green":
+            return random.choice(self.color_positions[color_current])[::-1]
+        return random.choice(positions_nearby)[::-1]
+
+
+    def set_positions(self):
+        positions = {}
+        for color in ['red','green', 'blue', 'red dark']:
+            file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+            with open(file_path, "r") as file:
+                positions_valid = ast.literal_eval(file.read())
+                positions[color] = positions_valid
+        return positions
 
     def set_activity_next(self):
         self.path = []
@@ -58,23 +77,6 @@ class Player:
                                                   allowed_colors=[self.activities_colors[activity_previous],
                                                                   "black",
                                                                   self.activities_colors[self.activity_current]])
-
-
-    def idle(self):
-        positons_next = self.get_position()
-        self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                 goal=positons_next,
-                                                 allowed_colors=[self.activities_colors[self.activity_current]])
-
-
-    def set_positions(self):
-        positions = {}
-        for color in ['red','green', 'blue', 'red dark']:
-            file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
-            with open(file_path, "r") as file:
-                positions_valid = ast.literal_eval(file.read())
-                positions[color] = positions_valid
-        return positions
 
     def __str__(self):
         return str(f"{self.activity_current, len(self.path)}")
