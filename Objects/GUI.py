@@ -32,6 +32,7 @@ class GUI:
         self.time_per_step = (end_date - start_date) / steps_max
         self.set_collision_sprite()
         self.set_positions_valid()
+        [player.set_positions() for player in self.players]
         #
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
