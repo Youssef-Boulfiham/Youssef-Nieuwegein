@@ -51,9 +51,9 @@ class GUI:
                 if event.type == pygame.QUIT:
                     running = False
             keys = pygame.key.get_pressed()
-            if keys[pygame.K_UP]:
-                self.move_cursor(0, -1)
             if keys[pygame.K_DOWN]:
+                self.move_cursor(0, -1)
+            if keys[pygame.K_UP]:
                 self.move_cursor(0, 1)
             if keys[pygame.K_RIGHT]:
                 self.move_cursor(-1, 0)
@@ -78,7 +78,7 @@ class GUI:
                 self.draw_textbox(player.position_current, f"{player}")
             self.draw_step_info()
             pygame.display.flip()
-            self.clock.tick(32)
+            self.clock.tick(1)
             self.step_counter += 1
         pygame.quit()
 
@@ -169,27 +169,28 @@ class GUI:
         self.screen.blit(week_surface, (text_x, week_y))
 
     def draw_textbox(self, player_position, text=""):
-        # Use fixed font size and padding so the textbox stays constant on screen.
-        fixed_font_size = 36
+        fixed_font_size = 28  # Reduced font size for a shorter box
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render("", True, (255, 255, 255))
+        text_surface = font.render(text, True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
-        fixed_padding = 5
+        fixed_padding = 4  # Slightly reduced padding
         box_width = text_width + fixed_padding * 2
-        box_height = text_height + fixed_padding * 2
+        box_height = text_height + fixed_padding * 2  # Reduce overall height
 
         # Convert the player's world position to screen coordinates.
-        # Note: using player_position[1] for x and player_position[0] for y as in your original code.
         screen_x = player_position[1] * self.cursor_zoom - self.cursor_offset[0]
         screen_y = player_position[0] * self.cursor_zoom - self.cursor_offset[1]
 
         # Position the textbox above the player's head.
-        # Here, we use a fixed vertical offset (e.g. 40 pixels) regardless of zoom.
         box_x = screen_x - box_width // 2
-        box_y = screen_y - 40 - box_height  # Adjust 40 pixels above the head; modify as needed
+        box_y = screen_y - 35 - box_height  # Adjusted offset
 
-        # Draw the textbox background and then the text.
-        pygame.draw.rect(self.screen, (0, 0, 0), (box_x, box_y, box_width, box_height))
+        # Create a semi-transparent surface
+        textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
+        textbox_surface.fill((181, 101, 29, 128))  # Light brown with 50% transparency
+
+        # Draw the textbox and text
+        self.screen.blit(textbox_surface, (box_x, box_y))
         self.screen.blit(text_surface, (box_x + fixed_padding, box_y + fixed_padding))
 
     def set_collision_sprite(self):
