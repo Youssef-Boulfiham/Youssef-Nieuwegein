@@ -17,11 +17,12 @@ class Player:
                                "vrije tijd thuis": [(304, 80)], "vrije tijd school": [(335, 400)], "vrije tijd vriend thuis": [(464, 255)]}
 
         self.df = pd.read_csv(
-            '/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';',
+            '/Youssef-Nieuwegein/Data/df_player.csv', sep=';',
             dtype=float)
         self.color_positions = None
         self.path = []
         self.activity_current = "thuis"
+        self.action = "walk"
         self.Pathfinding = AStar()
         self.activities_colors = {"thuis": "red",
                                   "school": "green",
@@ -30,11 +31,19 @@ class Player:
         self.position_current = (250, 100)
         self.nodes = []
         self.prompt = ""
+        self.friend_request = {"id": 0}
 
-    def step(self, activity_next=False):
-        if activity_next:
+    def step(self, step_current):
+        if step_current == 0:
+            print("set_activity()")
             self.set_activity_next()
-        if not len(self.path):
+        elif step_current == 1000:
+            print("make_friend()")
+            # self.
+        elif step_current == 1500:
+            print("substance_use()")
+            # self.
+        elif len(self.path) == 0:
             self.idle()
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
@@ -61,13 +70,16 @@ class Player:
         return random.choice(positions_nearby)[::-1]
 
     def set_positions(self):
-        "laad alle valide posities per activiteit in."
+        """Load all valid positions per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
-            file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
-            with open(file_path, "r") as file:
-                positions_valid = ast.literal_eval(file.read())
-                color_positions[color] = positions_valid
+            try:
+                file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+                with open(file_path, "r") as file:
+                    positions_valid = ast.literal_eval(file.read())
+                    color_positions[color] = positions_valid
+            except Exception:
+                continue
         self.color_positions = color_positions
 
     def set_activity_next(self):

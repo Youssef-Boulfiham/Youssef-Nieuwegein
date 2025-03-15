@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pygame
 import time
@@ -32,7 +33,7 @@ class GUI:
         self.time_per_step = (end_date - start_date) / steps_max
         # init
         self.set_collision_sprite()
-        self.set_positions_valid()
+        # self.set_positions_valid()
         [player.set_positions() for player in self.players]
         #
         pygame.init()
@@ -47,6 +48,7 @@ class GUI:
         #
         running = True
         while running:
+            self.date_current = self.start_date + (self.time_per_step * self.step_counter)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -64,21 +66,17 @@ class GUI:
             if keys[pygame.K_2]:
                 self.zoom(-1)
             #
-            activity_next = False
             for player in self.players:
-                if not self.step_counter % 1000:
-                    activity_next = True
-                player.step(activity_next)
-            self.date_current = self.start_date + (self.time_per_step * self.step_counter)
+                player.step(step_current=self.step_counter % 2000)
             # draw
             self.draw_background()
             self.draw_cursor()
             for player in self.players:
                 self.draw_player(player.position_current)
-                self.draw_textbox(player.position_current, f"{player}")
+                self.draw_textbox(player.position_current, player,  player.action)
             self.draw_step_info()
             pygame.display.flip()
-            self.clock.tick(1)
+            self.clock.tick(32)
             self.step_counter += 1
         pygame.quit()
 
@@ -168,30 +166,32 @@ class GUI:
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
 
-    def draw_textbox(self, player_position, text=""):
-        fixed_font_size = 28  # Reduced font size for a shorter box
+    def draw_textbox(self, player_position, text="", action="idle"):
+        fixed_font_size = 24  # Smaller font size
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(text, True, (255, 255, 255))
+        text_surface = font.render(str(text), True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
-        fixed_padding = 4  # Slightly reduced padding
+        fixed_padding = 2  # Reduced padding
         box_width = text_width + fixed_padding * 2
-        box_height = text_height + fixed_padding * 2  # Reduce overall height
-
-        # Convert the player's world position to screen coordinates.
+        box_height = text_height + fixed_padding * 2
+        image_path = os.path.join(self.root, f"graphics/{action}.png")
+        pictogram = pygame.image.load(image_path)
+        pictogram = pygame.transform.scale(pictogram, (20, 20))  # Resize if needed
+        box_width += 24  # Add extra space for the pictogram
+        box_height = max(box_height, 24)  # Ensure enough height
         screen_x = player_position[1] * self.cursor_zoom - self.cursor_offset[0]
         screen_y = player_position[0] * self.cursor_zoom - self.cursor_offset[1]
-
-        # Position the textbox above the player's head.
         box_x = screen_x - box_width // 2
-        box_y = screen_y - 35 - box_height  # Adjusted offset
-
-        # Create a semi-transparent surface
+        box_y = screen_y - 30 - box_height
         textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
         textbox_surface.fill((181, 101, 29, 128))  # Light brown with 50% transparency
-
-        # Draw the textbox and text
         self.screen.blit(textbox_surface, (box_x, box_y))
-        self.screen.blit(text_surface, (box_x + fixed_padding, box_y + fixed_padding))
+        if pictogram:
+            self.screen.blit(pictogram, (box_x + fixed_padding, box_y + (box_height - 20) // 2))
+            text_x = box_x + fixed_padding + 24  # Shift text right if pictogram is present
+        else:
+            text_x = box_x + fixed_padding
+        self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
     def set_collision_sprite(self):
         colors_possible = [['red'],['green'], ['blue'], ['red dark'],
@@ -214,7 +214,7 @@ class GUI:
 
         for i in colors_possible:
             colors_rgb = [self.colors[color] for color in i]
-            image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
+            image = Image.open(self.root + "graphics/enviroment_activity.png").convert("RGB")
             width, height = image.size
             pixels = image.load()
             collision_layer = np.zeros((height, width), dtype=int)

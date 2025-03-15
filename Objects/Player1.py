@@ -1,80 +1,70 @@
+import warnings
+import os
 import numpy as np
 import random
 import pandas as pd
-from Objects.Pathfinding import AStar
-# from Pathfinding import AStar
+import ast
+
+from Pathfinding import AStar
 
 
-class Player:
-
+class Agent:
     def __init__(self):
+        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.df = pd.read_csv(
-            '/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Objects/df_player.csv', sep=';',
-            dtype=float)
-        self.path = []
-        self.activity_current = "thuis"
-        self.Pathfinding = AStar()
-        self.position_current = self.get_random_point_in_activity_zone(["red"])
-        self.nodes = []
-        self.activities_coordinates = {"thuis": [[250, 100]],
-                                       "school": [[260, 330]],
-                                       "vriend thuis": [[380, 250]],
-                                       "vrije tijd": [[600, 400]],
-                                       "vrije tijd ongeorganiseerd": [[380, 250]]}
-        self.activities_colors = {"thuis": "red",
-                                  "school": "blue",
-                                  "vrije tijd": "green",
-                                  "vriend thuis": "red dark"}
-        self.prompt = ""
+            f'{self.root}/Data/df_player.csv', sep=';',
+            dtype=float
+        )
+        self.name_activity = {}  # Store name-activity mapping
+        self.activity_nodes = {
+            "thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
+            "thuis vrije tijd": [(575, 400)], "school thuis": [(224, 175)],
+            "school vriend thuis": [(368, 256)], "school vrije tijd": [(575, 400)],
+            "vriend thuis thuis": [(304, 80), (224, 175)], "vriend thuis school": [(335, 400), (255, 300)],
+            "vriend thuis vrije tijd": [(575, 400)], "vrije tijd thuis": [(304, 80)],
+            "vrije tijd school": [(335, 400)], "vrije tijd vriend thuis": [(464, 255)]
+        }
+        self.color_positions = self.get_positions()
+
+    def get_positions(self):
+        """Load all valid positions per activity."""
+        color_positions = {}
+        for color in ['red', 'green', 'blue', 'red dark']:
+            try:
+                file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+                with open(file_path, "r") as file:
+                    positions_valid = ast.literal_eval(file.read())
+                    color_positions[color] = positions_valid
+            except Exception as e:
+                warnings.warn(f"{e}", stacklevel=2)
+        return color_positions
+
+
+class Agents:
+    def __init__(self, name, agent: Agent):
+        self.name = name
+        self.activity = "idle"
+        self.agent = agent  # Reference the shared Agent instance
+
+
+class GUI:
+    def __init__(self, agent: Agent, agents: list):
+        self.agent = agent
+        self.agents = agents
 
     def step(self):
-        if not len(self.path):
-            self.step_idle()
-        self.position_current = tuple(self.path[0])
-        self.path.pop(0)
+        self.agent.name_activity = {agent.name: agent.activity for agent in self.agents}
 
-    def set_activity_next(self):
-        self.path = []
-        activities = self.df.iloc[0, 7:].to_dict()
-        activity_names = list(activities.keys())
-        activity_probs = np.array(list(activities.values()))
-        activity_probs /= activity_probs.sum()
-        cumsum_activities = np.cumsum(activity_probs)
-        random_number = np.random.rand()
-        chosen_index = np.searchsorted(cumsum_activities, random_number)
-        activity_next = activity_names[chosen_index]
-        self.path += self.Pathfinding.search_path(start=self.position_current,
-                                                  goal=random.choice(self.activities_coordinates[activity_next]),
-                                                  allowed_colors=[self.activities_colors[self.activity_current],
-                                                                  "black",
-                                                                  self.activities_colors[activity_next]])
-        self.activity_current = activity_next
 
-    def get_random_point_in_activity_zone(self, allowed_colors):
-        self.Pathfinding.get_collision_layer(allowed_colors)
-        collisions = np.loadtxt(f"{allowed_colors}.txt", dtype=int)
-        height, width = collisions.shape
-        while True:
-            x = random.randint(0, width - 1)
-            y = random.randint(0, height - 1)
-            if collisions[y, x] == 0:
-                return y, x
+# Create a single shared Agent instance
+agent = Agent()
 
-    def step_idle(self):
-        """
-        Let op!: kans op contact, hier/hiervoor initieren.
-        :param:
-            - kleur activity current
-            !-
+# Create child agents that reference the shared Agent
+agents = [Agents("Alice", agent), Agents("Bob", agent), Agents("Charlie", agent)]
 
-        :return:
-            x, y
-        """
-        allowed_colors = [self.activities_colors[self.activity_current]]
-        random_point = self.get_random_point_in_activity_zone(allowed_colors)
-        self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                 goal=random_point,
-                                                 allowed_colors=allowed_colors)
+# Pass to GUI
+game = GUI(agent, agents)
+game.step()
 
-    def __str__(self):
-        return str(f"{self.activity_current, len(self.path)}")
+# Output name-activity mapping
+print(game.agent.name_activity)
