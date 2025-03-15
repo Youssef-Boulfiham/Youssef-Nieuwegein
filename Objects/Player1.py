@@ -54,6 +54,8 @@ class Agents:
         self.agent = agent
         self.path = []
         self.df = pd.read_csv(f'{self.agent.root}/Data/df_player.csv', sep=';', dtype=float)
+        self.friends = []
+        self.friend_request = {}
 
     def __str__(self):
         return str(f"{self.action}")
