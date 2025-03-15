@@ -25,7 +25,7 @@ class GUI:
             "brown": (143, 110, 26),
             "red dark": (155, 0, 0)
         }
-        self.step_counter = 0
+        self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
         self.end_date = end_date
