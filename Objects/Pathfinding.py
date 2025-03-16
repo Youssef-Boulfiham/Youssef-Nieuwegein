@@ -7,11 +7,11 @@ class AStar:
     def __init__(self):
         pass
 
-    def search_path(self, start, goal, allowed_colors):
+    def search_path(self, start, end, collors_allowed):
         # get collisions
-        # self.get_collision_layer(allowed_colors)
+        # self.get_collision_layer(collors_allowed)
         file = ("/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/collisions/" +
-                f"{allowed_colors}.txt")
+                f"{collors_allowed}.txt")
 
         collisions = np.loadtxt(file, dtype=int)
 
@@ -19,12 +19,12 @@ class AStar:
         heapq.heappush(open_set, (0, tuple(start)))  # Convert start to tuple
         came_from = {}
         g_score = {tuple(start): 0}  # Convert start to tuple
-        f_score = {tuple(start): self.heuristic(start, goal)}
+        f_score = {tuple(start): self.heuristic(start, end)}
 
         while open_set:
             _, current = heapq.heappop(open_set)
 
-            if current == tuple(goal):  # Ensure goal comparison matches tuple
+            if current == tuple(end):  # Ensure end comparison matches tuple
                 path = []
                 while current in came_from:
                     path.append(list(current))  # Convert back to list for consistency
@@ -38,9 +38,9 @@ class AStar:
                 if neighbor_tuple not in g_score or tentative_g_score < g_score[neighbor_tuple]:
                     came_from[neighbor_tuple] = current
                     g_score[neighbor_tuple] = tentative_g_score
-                    f_score[neighbor_tuple] = tentative_g_score + self.heuristic(neighbor, goal)
+                    f_score[neighbor_tuple] = tentative_g_score + self.heuristic(neighbor, end)
                     heapq.heappush(open_set, (f_score[neighbor_tuple], neighbor_tuple))
-        print("No path", allowed_colors, start, goal)
+        print("No path", collors_allowed, start, end)
         return [list(start)]
 
     @staticmethod

@@ -28,8 +28,8 @@ class GUI:
             "brown": (143, 110, 26),
             "red dark": (155, 0, 0)
         }
-        self.set_collision_sprite()
-        self.set_positions_valid()
+        # self.set_collision_sprite()
+        # self.set_positions_valid()
         positions_color = self.get_positions()
         self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]
 
@@ -46,6 +46,7 @@ class GUI:
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
+        # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
         self.width, self.height = self.background.get_size()
         self.cursor_position = [self.width // 2, self.height // 2]
         self.screen = pygame.display.set_mode((self.width, self.height))
@@ -86,7 +87,7 @@ class GUI:
                 self.draw_textbox(agent.position_current, str(agent), agent.action)
             self.draw_step_info()
             pygame.display.flip()
-            self.clock.tick(32)
+            self.clock.tick(60)
             self.step_counter += 1
         pygame.quit()
 
@@ -176,7 +177,7 @@ class GUI:
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
 
-    def draw_textbox(self, agent_position, text="", action="idle"):
+    def draw_textbox(self, agent_position, text, action):
         fixed_font_size = 24  # Smaller font size
         font = pygame.font.Font(None, fixed_font_size)
         text_surface = font.render(str(text), True, (255, 255, 255))
