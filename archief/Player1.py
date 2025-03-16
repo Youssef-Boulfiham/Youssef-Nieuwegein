@@ -16,7 +16,6 @@ import ast
 class Agent:
     def __init__(self, name, color_positions, root):
         self.root = root
-        #
         self.df = pd.read_csv(f'{self.root}/Data/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.position_current = (250, 100)
@@ -35,10 +34,6 @@ class Agent:
                                "vriend thuis school": [(335, 400), (255, 300)], "vriend thuis vrije tijd": [(575, 400)],
                                "vrije tijd thuis": [(304, 80)], "vrije tijd school": [(335, 400)],
                                "vrije tijd vriend thuis": [(464, 255)]}
-        self.activities_colors = {"thuis": "red",
-                                  "school": "green",
-                                  "vrije tijd": "blue",
-                                  "vriend thuis": "red dark"}
         self.activities_colors = {"thuis": "red",
                                   "school": "green",
                                   "vrije tijd": "blue",
@@ -66,6 +61,9 @@ class GUI:
         self.agents = [Agent(i, positions_color, self.root) for i in range(agents_count_)]
         self.name_activity = {}
 
+
+
+
     def step(self):
         self.name_activity = {agent.name: agent.activity for agent in self.agents}
 
@@ -73,7 +71,6 @@ class GUI:
         """Load all valid positions per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
-            # noinspection PyBroadException
             try:
                 file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
                 with open(file_path, "r") as file:
