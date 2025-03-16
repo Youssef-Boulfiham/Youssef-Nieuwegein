@@ -3,18 +3,21 @@ import numpy as np
 import pygame
 import time
 from PIL import Image
+from Objects.Agent import Agent
+import ast
 
 
 class GUI:
-    def __init__(self, players, start_date, end_date, steps_max):
-        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
+    def __init__(self, agent_count, start_date, end_date, steps_max):
+        self.name_activity = {}
+        #
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
         self.cursor_size = 10
         self.cursor_step = 10
         self.cursor_color = (255, 0, 0)
         self.cursor_offset = [0, 0]
-        self.players = players
+        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein"
         self.colors = {
             "black": (0, 0, 0),
             "white": (255, 255, 255),
@@ -25,6 +28,11 @@ class GUI:
             "brown": (143, 110, 26),
             "red dark": (155, 0, 0)
         }
+        self.set_collision_sprite()
+        self.set_positions_valid()
+        positions_color = self.get_positions()
+        self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]
+
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
@@ -33,18 +41,17 @@ class GUI:
         self.time_per_step = (end_date - start_date) / steps_max
         # init
         self.set_collision_sprite()
-        # self.set_positions_valid()
-        [player.set_positions() for player in self.players]
-        #
+        self.set_positions_valid()
+        [agent.set_positions() for agent in self.agents]
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
-        self.background = pygame.image.load(self.root + "graphics/enviroment_background.png")
+        self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
         self.width, self.height = self.background.get_size()
         self.cursor_position = [self.width // 2, self.height // 2]
         self.screen = pygame.display.set_mode((self.width, self.height))
-        self.image_player = pygame.image.load(self.root + "graphics/Agent_front.png").convert_alpha()
+        self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.clock = pygame.time.Clock()
-        self.image_player_width, self.image_player_height = self.image_player.get_size()
+        self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         #
         running = True
         while running:
@@ -66,14 +73,17 @@ class GUI:
             if keys[pygame.K_2]:
                 self.zoom(-1)
             #
-            for player in self.players:
-                player.step(step_current=self.step_counter % 2000)
+            for agent in self.agents:
+                agent.step(step_current=self.step_counter % 2000)
+                self.name_activity = {agent.name: agent.activity}
+            if self.step_counter % 250 == 0:
+                print(self.name_activity)
             # draw
             self.draw_background()
             self.draw_cursor()
-            for player in self.players:
-                self.draw_player(player.position_current)
-                self.draw_textbox(player.position_current, player,  player.action)
+            for agent in self.agents:
+                self.draw_agent(agent.position_current)
+                self.draw_textbox(agent.position_current, str(agent), agent.action)
             self.draw_step_info()
             pygame.display.flip()
             self.clock.tick(32)
@@ -136,12 +146,12 @@ class GUI:
         )
         pygame.draw.ellipse(self.screen, self.cursor_color, cursor_rect)
 
-    def draw_player(self, coordinates):
+    def draw_agent(self, coordinates):
         scale_factor = self.cursor_zoom
-        y_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_player_height // 2
-        x_pos = (coordinates[1] * scale_factor) - self.cursor_offset[0] - self.image_player_width // 2
-        scaled_image = pygame.transform.scale(self.image_player, (
-            int(self.image_player_width * scale_factor), int(self.image_player_height * scale_factor)))
+        y_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
+        x_pos = (coordinates[1] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
+        scaled_image = pygame.transform.scale(self.image_agent, (
+            int(self.image_agent_width * scale_factor), int(self.image_agent_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
     def draw_step_info(self):
@@ -166,7 +176,7 @@ class GUI:
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
 
-    def draw_textbox(self, player_position, text="", action="idle"):
+    def draw_textbox(self, agent_position, text="", action="idle"):
         fixed_font_size = 24  # Smaller font size
         font = pygame.font.Font(None, fixed_font_size)
         text_surface = font.render(str(text), True, (255, 255, 255))
@@ -179,8 +189,8 @@ class GUI:
         pictogram = pygame.transform.scale(pictogram, (20, 20))  # Resize if needed
         box_width += 24  # Add extra space for the pictogram
         box_height = max(box_height, 24)  # Ensure enough height
-        screen_x = player_position[1] * self.cursor_zoom - self.cursor_offset[0]
-        screen_y = player_position[0] * self.cursor_zoom - self.cursor_offset[1]
+        screen_x = agent_position[1] * self.cursor_zoom - self.cursor_offset[0]
+        screen_y = agent_position[0] * self.cursor_zoom - self.cursor_offset[1]
         box_x = screen_x - box_width // 2
         box_y = screen_y - 30 - box_height
         textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
@@ -194,7 +204,7 @@ class GUI:
         self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
     def set_collision_sprite(self):
-        colors_possible = [['red'],['green'], ['blue'], ['red dark'],
+        colors_possible = [['red'], ['green'], ['blue'], ['red dark'],
                            ['red', 'black', 'red'],
                            ['red', 'black', 'green'],
                            ['red', 'black', 'blue'],
@@ -214,7 +224,7 @@ class GUI:
 
         for i in colors_possible:
             colors_rgb = [self.colors[color] for color in i]
-            image = Image.open(self.root + "graphics/enviroment_activity.png").convert("RGB")
+            image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
             width, height = image.size
             pixels = image.load()
             collision_layer = np.zeros((height, width), dtype=int)
@@ -222,15 +232,29 @@ class GUI:
                 for x in range(width):
                     if pixels[x, y] not in colors_rgb:
                         collision_layer[y, x] = 1  # Block the color
-            np.savetxt(f"{self.root + "Data/collisions/"}{i}.txt", collision_layer, fmt='%d')
+            np.savetxt(f"{self.root + "/Data/collisions/"}{i}.txt", collision_layer, fmt='%d')
 
     def set_positions_valid(self):
         for i in ["red", "green", "blue", "red dark"]:
-            layer_collision = np.loadtxt(self.root + f"Data/collisions/['{i}'].txt", dtype=int)
+            layer_collision = np.loadtxt(self.root + f"/Data/collisions/['{i}'].txt", dtype=int)
             positions_valid = [(j, i) for i in range(layer_collision.shape[0]) for j in
                                range(layer_collision.shape[1])
                                if not layer_collision[i, j]]
             #
-            with open(self.root + f"Data/positions/{i}.txt", "w") as file:
+            with open(self.root + f"/Data/positions/{i}.txt", "w") as file:
                 file.write(str(positions_valid))
 
+    def get_positions(self):
+        """Load all valid positions per activity."""
+        color_positions = {}
+        for color in ['red', 'green', 'blue', 'red dark']:
+            # noinspection PyBroadException
+            try:
+                file_path = os.path.join(self.root, f"{self.root}/Data/positions/{color}.txt")
+                with open(file_path, "r") as file:
+                    positions_valid = ast.literal_eval(file.read())
+                    color_positions[color] = positions_valid
+            except Exception as e:
+                print(
+                    f"\033[93m{f'posities-activiteit-{color} nog niet berekend'}\033[0m \033 {e}")
+        return color_positions

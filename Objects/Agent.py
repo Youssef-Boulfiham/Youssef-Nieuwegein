@@ -7,31 +7,34 @@ from Objects.Pathfinding import AStar
 import ast
 
 
-class Player:
+class Agent:
 
-    def __init__(self):
-        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
-        self.activity_entry = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)], "thuis vrije tijd": [(575, 400)],
-                               "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)], "school vrije tijd": [(575, 400)],
-                               "vriend thuis thuis": [(304, 80), (224, 175)], "vriend thuis school": [(335, 400), (255, 300)], "vriend thuis vrije tijd": [(575, 400)],
-                               "vrije tijd thuis": [(304, 80)], "vrije tijd school": [(335, 400)], "vrije tijd vriend thuis": [(464, 255)]}
-
-        self.df = pd.read_csv(
-            '/Youssef-Nieuwegein/Data/df_player.csv', sep=';',
-            dtype=float)
-        self.color_positions = None
+    def __init__(self, name, color_positions, root):
+        self.root = root
+        #
+        self.df = pd.read_csv(f'{self.root}/Data/df_player.csv', sep=';', dtype=float)
+        self.name = name
+        self.position_current = (250, 100)
+        self.action = "idle"
+        self.activity = "thuis"
         self.path = []
-        self.activity_current = "thuis"
-        self.action = "walk"
+        self.friends = []
+        self.friend_request = {}
+        #
         self.Pathfinding = AStar()
+        self.color_positions = color_positions
+        self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
+                               "thuis vrije tijd": [(575, 400)],
+                               "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)],
+                               "school vrije tijd": [(575, 400)],
+                               "vriend thuis thuis": [(304, 80), (224, 175)],
+                               "vriend thuis school": [(335, 400), (255, 300)], "vriend thuis vrije tijd": [(575, 400)],
+                               "vrije tijd thuis": [(304, 80)], "vrije tijd school": [(335, 400)],
+                               "vrije tijd vriend thuis": [(464, 255)]}
         self.activities_colors = {"thuis": "red",
                                   "school": "green",
                                   "vrije tijd": "blue",
                                   "vriend thuis": "red dark"}
-        self.position_current = (250, 100)
-        self.nodes = []
-        self.prompt = ""
-        self.friend_request = {"id": 0}
 
     def step(self, step_current):
         if step_current == 0:
@@ -105,9 +108,5 @@ class Player:
                                                                   self.activities_colors[self.activity_current]])
 
     def __str__(self):
-        return str(f"{self.activity_current, len(self.path)}")
+        return str(f"{self.action}")
 
-    def foo(self):
-
-        # random.choice(self.activity_entry[self.activity_current])
-        pass

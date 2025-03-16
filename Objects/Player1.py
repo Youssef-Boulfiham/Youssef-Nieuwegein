@@ -27,6 +27,7 @@ class Agent:
         self.friend_request = {}
         #
         self.Pathfinding = AStar()
+        self.color_positions = color_positions
         self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
                                "thuis vrije tijd": [(575, 400)],
                                "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)],
@@ -39,11 +40,6 @@ class Agent:
                                   "school": "green",
                                   "vrije tijd": "blue",
                                   "vriend thuis": "red dark"}
-        self.activities_colors = {"thuis": "red",
-                                  "school": "green",
-                                  "vrije tijd": "blue",
-                                  "vriend thuis": "red dark"}
-        self.color_positions = color_positions
 
     def __str__(self):
         return str(f"{self.action}")
@@ -129,4 +125,4 @@ class GUI:
 agents_count = 5
 game = GUI(agents_count)
 game.step()
-print(game.name_activity)  # {'Alice': 'idle', 'Bob': 'idle', 'Charlie': 'idle'}
+print(game.name_activity)
