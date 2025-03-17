@@ -10,6 +10,7 @@ import ast
 class GUI:
     def __init__(self, agent_count, start_date, end_date, steps_max):
         self.name_activity = {}
+        # self.
         #
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
@@ -242,16 +243,16 @@ class GUI:
                                range(layer_collision.shape[1])
                                if not layer_collision[i, j]]
             #
-            with open(self.root + f"/Data/positions/{i}.txt", "w") as file:
+            with open(self.root + f"/Data/coordinates/{i}.txt", "w") as file:
                 file.write(str(positions_valid))
 
     def get_positions(self):
-        """Load all valid positions per activity."""
+        """Load all valid coordinates per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
             # noinspection PyBroadException
             try:
-                file_path = os.path.join(self.root, f"{self.root}/Data/positions/{color}.txt")
+                file_path = os.path.join(self.root, f"{self.root}/Data/coordinates/{color}.txt")
                 with open(file_path, "r") as file:
                     positions_valid = ast.literal_eval(file.read())
                     color_positions[color] = positions_valid
@@ -259,3 +260,5 @@ class GUI:
                 print(
                     f"\033[93m{f'posities-activiteit-{color} nog niet berekend'}\033[0m \033 {e}")
         return color_positions
+
+    # def get_

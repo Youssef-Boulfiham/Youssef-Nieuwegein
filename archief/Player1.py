@@ -68,11 +68,11 @@ class GUI:
         self.name_activity = {agent.name: agent.activity for agent in self.agents}
 
     def get_positions(self):
-        """Load all valid positions per activity."""
+        """Load all valid coordinates per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
             try:
-                file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+                file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
                 with open(file_path, "r") as file:
                     positions_valid = ast.literal_eval(file.read())
                     color_positions[color] = positions_valid
@@ -119,7 +119,7 @@ class GUI:
                                range(layer_collision.shape[1])
                                if not layer_collision[i, j]]
             #
-            with open(self.root + f"/Data/positions/{i}.txt", "w") as file:
+            with open(self.root + f"/Data/coordinates/{i}.txt", "w") as file:
                 file.write(str(positions_valid))
 
 

@@ -40,24 +40,25 @@ class Agent:
     def step(self, step_current):
         if step_current == 0:
             self.action = "traveling"
-            position_end, collors_allowed = self.choose_activity()
+            position_goal, collors_allowed = self.choose_activity()
         elif step_current == 1000:
-            # position_end, collors_allowed = self.make_friend()
-            self.action = "make friend"
-            position_end, collors_allowed = self.make_friends()
+            # position_goal, collors_allowed = self.make_friend()
+            self.action = "make friend"  # pictogram
+            position_goal, collors_allowed = self.make_friends()
         elif step_current == 1500:
             # self.action = "substance use"
-            # position_end, collors_allowed = self.substance_use()
+            position_goal, collors_allowed = self.substance_use()
             pass
         elif len(self.path) == 0:  # idle
             if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans op stilstaan
                 self.path = [self.position_current] * random.randint(5, 25)
             else:
-                position_end, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
+                position_goal, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
         # noinspection PyUnboundLocalVariable
-        if "position_end" in locals():
+        if "position_goal" in locals():
+            # noinspection PyUnboundLocalVariable
             self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                     end=position_end,
+                                                     end=position_goal,
                                                      collors_allowed=collors_allowed)
         if len(self.path) == 0:
             a= 0
@@ -80,15 +81,40 @@ class Agent:
         # kies voor dichtsbijzijnde positie of willekeurig
         # als andere activiteit, loop dan naar ingang van volgende activiteit
         if self.activity != activity_previous:
-            goal = random.choice(self.activity_nodes[f"{activity_previous} {self.activity}"])
+            position_goal = random.choice(self.activity_nodes[f"{activity_previous} {self.activity}"])
         # als zelfde activiteit, loop naar willeukeurige positie in activiteitsgebied
-        else: goal = self.get_position()
-        return (goal,
+        else: position_goal = self.get_position()
+        return (position_goal,
                 [self.activities_colors[activity_previous],
                  "black",
                  self.activities_colors[self.activity]])
     
     def make_friends(self):
+        """
+
+        :return:
+        """
+        # loop agents
+
+        # of not friend amd
+        # friend_requests griend[agent[i]] and
+        # activity_current == "thuis"
+
+        # Let op!: loop naar elkaar toe
+        #       - sta stil
+        #          # pictogram
+        #
+
+        n = None
+        start_x=352
+        end_x=240
+        start_y=384
+        # y_values = [start_y - (i * (start_y // (n - 1))) for i in range(n)]
+        # partitions = [(start_x, y, end_x, y) for y in y_values]
+        return (self.get_position(),
+                [self.activities_colors[self.activity]])
+
+    def substance_use(self):
         return (self.get_position(),
                 [self.activities_colors[self.activity]])
 
@@ -109,11 +135,11 @@ class Agent:
         return random.choice(positions_nearby)[::-1]
 
     def set_positions(self):
-        """Load all valid positions per activity."""
+        """Load all valid coordinates per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
             try:
-                file_path = os.path.join(self.root, f"Data/positions/{color}.txt")
+                file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
                 with open(file_path, "r") as file:
                     positions_valid = ast.literal_eval(file.read())
                     color_positions[color] = positions_valid
