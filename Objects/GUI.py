@@ -29,7 +29,6 @@ class GUI:
         positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
         self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]  # statitieken
-        # [agent.set_positions() for agent in self.agents] # denk verholpen error, kan weg
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date

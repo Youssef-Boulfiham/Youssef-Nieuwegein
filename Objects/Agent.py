@@ -139,19 +139,6 @@ class Agent:
             return random.choice(self.positions_color[color_current])[::-1]
         return position_nearby[::-1]
 
-    # def set_positions(self):
-    #     """Load all valid coordinates per activity."""
-    #     positions_color = {}
-    #     for color in ['red', 'green', 'blue', 'red dark']:
-    #         try:
-    #             file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
-    #             with open(file_path, "r") as file:
-    #                 positions_valid = ast.literal_eval(file.read())
-    #                 positions_color[color] = positions_valid
-    #         except Exception:
-    #             continue
-    #     self.positions_color = positions_color
-
     def __str__(self):
         return str(f"{self.action}")
 
