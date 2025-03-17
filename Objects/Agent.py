@@ -1,5 +1,6 @@
 import os
 import numpy as np
+rng = np.random.default_rng()
 import random
 import pandas as pd
 # noinspection PyUnresolvedReferences
@@ -124,7 +125,8 @@ class Agent:
             - 2e keus: als te ver of activiteit vrije tijd dan willekeurig."""
         color_current = self.activities_colors[self.activity]
         # hussel lijst zodat niet steeds dezelfde (,de eerste,) positie word gekozen.
-        positions = np.random.permutation(self.color_positions[color_current])
+        positions = rng.permutation(self.color_positions[color_current])
+        # positions = random.shuffle(self.color_positions[color_current])
         # zoek een plaats in de buurt
         positions_nearby = [pos for pos in positions
                             if abs(pos[0] - self.position_current[0]) <= 100 and

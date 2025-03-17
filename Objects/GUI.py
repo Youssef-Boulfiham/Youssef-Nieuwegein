@@ -5,7 +5,7 @@ import time
 from PIL import Image
 from Objects.Agent import Agent
 import ast
-
+import json
 
 class GUI:
     def __init__(self, agent_count, start_date, end_date, steps_max):
@@ -181,7 +181,7 @@ class GUI:
     def draw_textbox(self, agent_position, text, action):
         fixed_font_size = 24  # Smaller font size
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(str(text), True, (255, 255, 255))
+        text_surface = font.render(str(""), True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
         fixed_padding = 2  # Reduced padding
         box_width = text_width + fixed_padding * 2
@@ -237,14 +237,13 @@ class GUI:
             np.savetxt(f"{self.root + "/Data/collisions/"}{i}.txt", collision_layer, fmt='%d')
 
     def set_positions_valid(self):
-        for i in ["red", "green", "blue", "red dark"]:
-            layer_collision = np.loadtxt(self.root + f"/Data/collisions/['{i}'].txt", dtype=int)
-            positions_valid = [(j, i) for i in range(layer_collision.shape[0]) for j in
-                               range(layer_collision.shape[1])
-                               if not layer_collision[i, j]]
-            #
-            with open(self.root + f"/Data/coordinates/{i}.txt", "w") as file:
-                file.write(str(positions_valid))
+        for color in ["red", "green", "blue", "red dark"]:
+            layer_collision = np.loadtxt(self.root + f"/Data/collisions/['{color}'].txt", dtype=int)
+            positions_valid = [(x, y) for y in range(layer_collision.shape[0])
+                               for x in range(layer_collision.shape[1])
+                               if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
+            with open(self.root + f"/Data/coordinates/{color}.txt", "w") as file:
+                json.dump(positions_valid, file)
 
     def get_positions(self):
         """Load all valid coordinates per activity."""
@@ -261,4 +260,5 @@ class GUI:
                     f"\033[93m{f'posities-activiteit-{color} nog niet berekend'}\033[0m \033 {e}")
         return color_positions
 
-    # def get_
+    def set_positions_friends(self):
+        pass
