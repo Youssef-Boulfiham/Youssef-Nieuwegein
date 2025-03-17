@@ -10,7 +10,7 @@ class AStar:
     def search_path(self, start, end, collors_allowed):
         # get collisions
         # self.get_collision_layer(collors_allowed)
-        file = ("/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/collisions/" +
+        file = ("/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/collisions/" +
                 f"{collors_allowed}.txt")
 
         collisions = np.loadtxt(file, dtype=int)

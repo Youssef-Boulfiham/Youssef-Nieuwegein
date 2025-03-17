@@ -7,18 +7,11 @@ from Objects.Agent import Agent
 import ast
 import json
 
+
 class GUI:
     def __init__(self, agent_count, start_date, end_date, steps_max):
         self.name_activity = {}
-        # self.
         #
-        self.cursor_zooms = [1.0, 2.0, 4.0]
-        self.cursor_zoom = 1.0
-        self.cursor_size = 10
-        self.cursor_step = 10
-        self.cursor_color = (255, 0, 0)
-        self.cursor_offset = [0, 0]
-        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein"
         self.colors = {
             "black": (0, 0, 0),
             "white": (255, 255, 255),
@@ -29,21 +22,27 @@ class GUI:
             "brown": (143, 110, 26),
             "red dark": (155, 0, 0)
         }
-        # self.set_collision_sprite()
-        # self.set_positions_valid()
+        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
+        self.set_collision()
+        self.set_positions()
+        self.set_positions_friends()
         positions_color = self.get_positions()
-        self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]
-
+        self.positions_friends = self.get_positions_friends()
+        self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]  # statitieken
+        # [agent.set_positions() for agent in self.agents] # denk verholpen error, kan weg
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
         self.end_date = end_date
         self.steps_max = steps_max
         self.time_per_step = (end_date - start_date) / steps_max
-        # init
-        self.set_collision_sprite()
-        self.set_positions_valid()
-        [agent.set_positions() for agent in self.agents]
+        self.cursor_zooms = [1.0, 2.0, 4.0]
+        self.cursor_zoom = 1.0
+        self.cursor_size = 10
+        self.cursor_step = 10
+        self.cursor_color = (255, 0, 0)
+        self.cursor_offset = [0, 0]
+        # pygame
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
@@ -51,8 +50,9 @@ class GUI:
         self.width, self.height = self.background.get_size()
         self.cursor_position = [self.width // 2, self.height // 2]
         self.screen = pygame.display.set_mode((self.width, self.height))
-        self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.clock = pygame.time.Clock()
+        # agent
+        self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         #
         running = True
@@ -81,8 +81,8 @@ class GUI:
             if self.step_counter % 250 == 0:
                 print(self.name_activity)
             # draw
-            self.draw_background()
             self.draw_cursor()
+            self.draw_background()
             for agent in self.agents:
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, str(agent), agent.action)
@@ -205,7 +205,7 @@ class GUI:
             text_x = box_x + fixed_padding
         self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
-    def set_collision_sprite(self):
+    def set_collision(self):
         colors_possible = [['red'], ['green'], ['blue'], ['red dark'],
                            ['red', 'black', 'red'],
                            ['red', 'black', 'green'],
@@ -233,32 +233,60 @@ class GUI:
             for y in range(height):
                 for x in range(width):
                     if pixels[x, y] not in colors_rgb:
-                        collision_layer[y, x] = 1  # Block the color
-            np.savetxt(f"{self.root + "/Data/collisions/"}{i}.txt", collision_layer, fmt='%d')
+                        collision_layer[y, x] = 1
+            np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
 
-    def set_positions_valid(self):
+    def set_positions(self):
         for color in ["red", "green", "blue", "red dark"]:
-            layer_collision = np.loadtxt(self.root + f"/Data/collisions/['{color}'].txt", dtype=int)
+            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
             positions_valid = [(x, y) for y in range(layer_collision.shape[0])
                                for x in range(layer_collision.shape[1])
                                if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
-            with open(self.root + f"/Data/coordinates/{color}.txt", "w") as file:
+            with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
                 json.dump(positions_valid, file)
 
     def get_positions(self):
         """Load all valid coordinates per activity."""
-        color_positions = {}
+        positions_color = {}
         for color in ['red', 'green', 'blue', 'red dark']:
             # noinspection PyBroadException
             try:
-                file_path = os.path.join(self.root, f"{self.root}/Data/coordinates/{color}.txt")
+                file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{color}.txt")
                 with open(file_path, "r") as file:
                     positions_valid = ast.literal_eval(file.read())
-                    color_positions[color] = positions_valid
-            except Exception as e:
-                print(
-                    f"\033[93m{f'posities-activiteit-{color} nog niet berekend'}\033[0m \033 {e}")
-        return color_positions
+                    positions_color[color] = positions_valid
+            except FileNotFoundError:
+                print(f"\033[93mposities-activiteit-{color} nog niet berekend\033[0m")
+        return positions_color
 
     def set_positions_friends(self):
-        pass
+        activities = ["school", "vrienden thuis", "vrije tijd"]
+        coordinates = [[384, 336, 350, 224],
+                       [270, 462, 240, 380],
+                       [480, 624, 432, 524]]
+        all_positions = []
+        for i, activity in enumerate(activities):
+            x, y, x1, y1 = coordinates[i]
+            n = 12
+            y_values = [y + round(j * (y1 - y) / n) for j in range(n + 1)]
+            positions = [(x, yi) for yi in y_values] + [(x1, yi) for yi in y_values]
+            all_positions.append(positions)
+            #
+            file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w") as f:
+                f.write(str(positions))
+
+    def get_positions_friends(self):
+        activities = ["school", "vrienden thuis", "vrije tijd"]
+        all_positions = []
+        for activity in activities:
+            file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
+            try:
+                with open(file_path, "r") as f:
+                    positions = ast.literal_eval(f.read())
+                    all_positions.append(positions)
+            except FileNotFoundError:
+                print(f"\033[93mposities-activiteit-{activity} nog niet berekend\033[0m")
+                all_positions.append([])
+        return all_positions

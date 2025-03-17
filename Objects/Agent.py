@@ -11,10 +11,10 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, color_positions, root):
+    def __init__(self, name, positions_color, root):
         self.root = root
         #
-        self.df = pd.read_csv(f'{self.root}/Data/df_player.csv', sep=';', dtype=float)
+        self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.position_current = (250, 100)
         self.action = "idle"
@@ -24,7 +24,7 @@ class Agent:
         self.friend_request = {}
         #
         self.Pathfinding = AStar()
-        self.color_positions = color_positions
+        self.positions_color = positions_color
         self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
                                "thuis vrije tijd": [(575, 400)],
                                "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)],
@@ -52,7 +52,7 @@ class Agent:
             pass
         elif len(self.path) == 0:  # idle
             if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans op stilstaan
-                self.path = [self.position_current] * random.randint(5, 25)
+                self.path = [self.position_current] * random.randint(5, 25)  # sta stil
             else:
                 position_goal, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
         # noinspection PyUnboundLocalVariable
@@ -105,13 +105,9 @@ class Agent:
         #       - sta stil
         #          # pictogram
         #
+        self.path = []
 
-        n = None
-        start_x=352
-        end_x=240
-        start_y=384
-        # y_values = [start_y - (i * (start_y // (n - 1))) for i in range(n)]
-        # partitions = [(start_x, y, end_x, y) for y in y_values]
+
         return (self.get_position(),
                 [self.activities_colors[self.activity]])
 
@@ -119,35 +115,42 @@ class Agent:
         return (self.get_position(),
                 [self.activities_colors[self.activity]])
 
+    import random
+    import numpy as np
+
     def get_position(self):
         """Geeft een valide positie IN HUIDIGE ACTIVITEIT:
             - 1e keus: positie in de buurt,
             - 2e keus: als te ver of activiteit vrije tijd dan willekeurig."""
         color_current = self.activities_colors[self.activity]
-        # hussel lijst zodat niet steeds dezelfde (,de eerste,) positie word gekozen.
-        positions = rng.permutation(self.color_positions[color_current])
-        # positions = random.shuffle(self.color_positions[color_current])
-        # zoek een plaats in de buurt
-        positions_nearby = [pos for pos in positions
-                            if abs(pos[0] - self.position_current[0]) <= 100 and
-                            abs(pos[1] - self.position_current[1]) <= 100]  # Let op!: BUG: isoleert
-        # als er geen positie in de buurt is of activiteit is vrije tijd
-        if not positions_nearby or color_current == "green":
-            return random.choice(self.color_positions[color_current])[::-1]
-        return random.choice(positions_nearby)[::-1]
+        # Hussel lijst zodat niet steeds dezelfde positie wordt gekozen.
+        positions = rng.permutation(self.positions_color[color_current])
+        # Sorteer op afstand tot huidige positie (zowel x als y)
+        positions = sorted(positions,
+                           key=lambda pos: abs(pos[0] - self.position_current[0]) + abs(pos[1] - self.position_current[1]))
+        # Bepaal een gewogen keuze, waarbij dichterbij vaker wordt gekozen
+        closer_half = positions[:len(positions) // 2]  # Selecteer de eerste helft (dichterbij)
+        if closer_half and random.random() < 0.75:  # 75% kans om uit de eerste helft te kiezen
+            position_nearby = random.choice(closer_half)
+        else:
+            position_nearby = random.choice(positions)  # Normale random keuze
+        # Als activiteit 'green' is, kies volledig willekeurig
+        if color_current == "green":
+            return random.choice(self.positions_color[color_current])[::-1]
+        return position_nearby[::-1]
 
-    def set_positions(self):
-        """Load all valid coordinates per activity."""
-        color_positions = {}
-        for color in ['red', 'green', 'blue', 'red dark']:
-            try:
-                file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
-                with open(file_path, "r") as file:
-                    positions_valid = ast.literal_eval(file.read())
-                    color_positions[color] = positions_valid
-            except Exception:
-                continue
-        self.color_positions = color_positions
+    # def set_positions(self):
+    #     """Load all valid coordinates per activity."""
+    #     positions_color = {}
+    #     for color in ['red', 'green', 'blue', 'red dark']:
+    #         try:
+    #             file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
+    #             with open(file_path, "r") as file:
+    #                 positions_valid = ast.literal_eval(file.read())
+    #                 positions_color[color] = positions_valid
+    #         except Exception:
+    #             continue
+    #     self.positions_color = positions_color
 
     def __str__(self):
         return str(f"{self.action}")
