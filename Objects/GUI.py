@@ -6,6 +6,7 @@ from PIL import Image
 from Objects.Agent import Agent
 import ast
 import json
+from collections import defaultdict
 
 
 class GUI:
@@ -74,11 +75,18 @@ class GUI:
             if keys[pygame.K_2]:
                 self.zoom(-1)
             #
-            for agent in self.agents:
-                agent.step(step_current=self.step_counter % 2000)
-                self.name_activity = {agent.name: agent.activity}
-            if self.step_counter % 250 == 0:
-                print(self.name_activity)
+            if self.step_counter % 2000 == 1000:
+                positions_friends = self.group_and_assign_positions()
+                for agent in self.agents:
+                    position_friend = positions_friends[agent.name]
+                    agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend)
+            else:
+                for agent in self.agents:
+                    self.name_activity[agent.name] = agent.activity
+                    agent.step(step_current=self.step_counter % 2000)
+
+
+
             # draw
             self.draw_cursor()
             self.draw_background()
@@ -259,7 +267,7 @@ class GUI:
         return positions_color
 
     def set_positions_friends(self):
-        activities = ["school", "vrienden thuis", "vrije tijd"]
+        activities = ["school", "vriend thuis", "vrije tijd"]
         coordinates = [[384, 336, 350, 224],
                        [270, 462, 240, 380],
                        [480, 624, 432, 524]]
@@ -268,7 +276,7 @@ class GUI:
             x, y, x1, y1 = coordinates[i]
             n = 12
             y_values = [y + round(j * (y1 - y) / n) for j in range(n + 1)]
-            positions = [(x, yi) for yi in y_values] + [(x1, yi) for yi in y_values]
+            positions = [(yi, x) for yi in y_values] + [(yi, x1) for yi in y_values]
             all_positions.append(positions)
             #
             file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
@@ -277,15 +285,42 @@ class GUI:
                 f.write(str(positions))
 
     def get_positions_friends(self):
-        activities = ["school", "vrienden thuis", "vrije tijd"]
-        all_positions = []
+        activities = ["school", "vriend thuis", "vrije tijd"]
+        all_positions = {}  # Change this to a dictionary instead of a list
         for activity in activities:
             file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
             try:
                 with open(file_path, "r") as f:
                     positions = ast.literal_eval(f.read())
-                    all_positions.append(positions)
+                    all_positions[activity] = positions
             except FileNotFoundError:
-                print(f"\033[93mposities-activiteit-{activity} nog niet berekend\033[0m")
-                all_positions.append([])
+                print(f"\033[93mposities-activiteit-{activity} nog niet geschreven\033[0m")
+                all_positions[activity] = []
         return all_positions
+
+    def group_and_assign_positions(self):
+        """
+        Groups agents by activity and assigns them predefined positions from self.positions_friends.
+        Returns a dictionary with agent names as keys and assigned positions as values.
+        """
+        print("hoevaak")
+        agents_per_activity = defaultdict(list)
+
+        # Group agents by activity (ignoring "thuis")
+        for agent, activity in self.name_activity.items():
+            if activity != "thuis":
+                agents_per_activity[activity].append(agent)
+
+        # Dictionary to store the agent name and its assigned position
+        agent_positions = {}
+
+        # Assign agents to positions from self.positions_friends
+        for activity, agents in agents_per_activity.items():
+            # Directly assign positions from self.positions_friends for the given activity
+            available_positions = self.positions_friends[activity]
+
+            for i, agent in enumerate(agents):
+                agent_position = available_positions[i]
+                agent_positions[agent] = agent_position  # Store agent name and assigned position
+
+        return agent_positions
