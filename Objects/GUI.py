@@ -78,10 +78,13 @@ class GUI:
             if self.step_counter % 2000 == 1000:
                 positions_friends = self.group_and_assign_positions()
                 for agent in self.agents:
-                    position_friend = positions_friends[agent.name]
+                    position_friend = positions_friends.get(agent.name, agent.position_current)
                     agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend)
             else:
                 for agent in self.agents:
+
+
+
                     self.name_activity[agent.name] = agent.activity
                     agent.step(step_current=self.step_counter % 2000)
 
@@ -303,7 +306,6 @@ class GUI:
         Groups agents by activity and assigns them predefined positions from self.positions_friends.
         Returns a dictionary with agent names as keys and assigned positions as values.
         """
-        print("hoevaak")
         agents_per_activity = defaultdict(list)
 
         # Group agents by activity (ignoring "thuis")

@@ -45,7 +45,6 @@ class Agent:
         if step_current == 0:
             position_goal, collors_allowed = self.choose_activity()
         elif step_current == 1000:
-            print("make friend")
             # meegeven
             position_goal, collors_allowed = positions_friends, [self.activities_colors[self.activity]]
             self.make_friends()
@@ -58,13 +57,14 @@ class Agent:
                 self.path = [self.position_current] * random.randint(5, 25)  # sta stil
             else:
                 position_goal, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
-        if "collors_allowed" in locals():
+        if "position_goal" in locals():
+            if position_goal is None:
+                a=0
             # noinspection PyUnboundLocalVariable
             self.path = self.Pathfinding.search_path(start=self.position_current,
                                                      end=position_goal,
                                                      collors_allowed=collors_allowed)
         if step_current == 1000:
-            print(step_current)
             self.path += [positions_friends] * (500 - len(self.path))
         if len(self.path) == 0:
             a = 0
