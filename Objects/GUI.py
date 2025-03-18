@@ -82,14 +82,8 @@ class GUI:
                     agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend)
             else:
                 for agent in self.agents:
-
-
-
                     self.name_activity[agent.name] = agent.activity
                     agent.step(step_current=self.step_counter % 2000)
-
-
-
             # draw
             self.draw_cursor()
             self.draw_background()

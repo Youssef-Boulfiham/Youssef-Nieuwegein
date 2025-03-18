@@ -38,8 +38,6 @@ class Agent:
         self.friends = []
         self.friend_request = {}
 
-
-
     def step(self, step_current, positions_friends=None):
         # zo leeg mogelijk houden
         if step_current == 0:
@@ -59,7 +57,7 @@ class Agent:
                 position_goal, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
         if "position_goal" in locals():
             if position_goal is None:
-                a=0
+                a = 0
             # noinspection PyUnboundLocalVariable
             self.path = self.Pathfinding.search_path(start=self.position_current,
                                                      end=position_goal,
@@ -69,7 +67,7 @@ class Agent:
         if len(self.path) == 0:
             a = 0
         if self.path is None:
-            a=0
+            a = 0
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
         # if step_current == 0:  # Let op!: niet efficient: gebruik % 1000 == 0 voor deze duplicate if
@@ -165,12 +163,12 @@ class Agent:
         #                 self.friend_request[target_friend] = self.friend_request.get(target_friend, 0) + 1
         #         print(positions[i])
         return (self.get_position(),  # goal
-                [self.activities_colors[self.activity]])  #allowed_colors
+                [self.activities_colors[self.activity]])  # allowed_colors
 
     def substance_use(self):
         # self.action = "substance use"
         return (self.get_position(),  # goal
-                [self.activities_colors[self.activity]]) # allowed_collors
+                [self.activities_colors[self.activity]])  # allowed_collors
 
     import random
     import numpy as np
