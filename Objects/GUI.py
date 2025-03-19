@@ -79,12 +79,12 @@ class GUI:
             #
             if self.step_counter % 2000 == 1000:
                 positions_friends = self.group_and_assign_positions()
-                # for agent in self.agents:
-                #     a = list(positions_friends)
-                #     b = a.index(agent.name)
-                #     if b % 2 == 1 :
-                #         c = a[b + 1]
-                # d = 0
+                for agent in self.agents:
+                    a = list(positions_friends)
+                    b = a.index(agent.name)
+                    if b % 2 == 1 :
+                        c = a[b + 1]
+                d = 0
                 for agent in self.agents:
                     position_friend = positions_friends.get(agent.name, agent.position_current)
                     agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend, name_friend=None)
