@@ -8,6 +8,8 @@ class AStar:
         pass
 
     def search_path(self, start, end, collors_allowed):
+        if start == end:
+            return []
         file = ("/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/collisions/" +
                 f"{collors_allowed}.txt")
 

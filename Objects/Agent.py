@@ -47,27 +47,20 @@ class Agent:
         elif activity in ["activiteit_kiezen"]:
             position_end, colors_allowed = self.activiteit_kiezen()
         elif len(self.path) == 0:  # idle
-            if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
-               print("a")
-               self.path = [self.position_current] * random.randint(5, 25)  # sta stil
-            else:
-                print("b")
-                position_end, colors_allowed = self.get_position(), [self.activities_colors[self.activity]]  # random
+            position_end, colors_allowed = self.idle() or (self.position_current, [self.activities_colors[self.activity]])
         if "position_end" in locals():
             self.path += self.Pathfinding.search_path(start=self.position_current,
                                                       end=position_end,
                                                       collors_allowed=colors_allowed)
 
-        if len(self.path) == 0:
-            a= 0
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
 
-    # def idle(self):
-    #     if len(self.path) == 0:
-    #         if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
-    #             self.path = [self.position_current] * random.randint(5, 25)  # sta stil
-    #         return self.get_position(), [self.activities_colors[self.activity]]  # random
+    def idle(self):
+        if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
+            self.path = [self.position_current] * random.randint(5, 25)  # sta stil
+        else:
+            return self.get_position(), [self.activities_colors[self.activity]]  # random
 
     def activiteit_kiezen(self):
         self.path = []  # reset
