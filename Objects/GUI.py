@@ -11,9 +11,9 @@ from collections import defaultdict
 
 
 class GUI:
-    def __init__(self, agent_count, start_date, end_date, steps_max):
+    def __init__(self, agents_count, start_date, end_date, steps_max):
         self.name_activity = {}
-        self.action = "reistijd"
+        self.activity = "idle"
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -31,7 +31,8 @@ class GUI:
         self.set_positions_friends()
         positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
-        self.agents = [Agent(i, positions_color, self.root) for i in range(agent_count)]  # statitieken
+        self.agents_count = agents_count
+        self.agents = [Agent(i, positions_color, self.root) for i in range(agents_count)]  # statitieken
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
@@ -58,6 +59,7 @@ class GUI:
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         #
         running = True
+        self.step_counter = 1000
         while running:
             self.date_current = self.start_date + (self.time_per_step * self.step_counter)
             for event in pygame.event.get():
@@ -76,36 +78,25 @@ class GUI:
                 self.zoom(1)
             if keys[pygame.K_2]:
                 self.zoom(-1)
-            #
-            if self.step_counter % 2000 == 1000:
-                positions_friends = self.group_and_assign_positions()
-                # for agent in self.agents:
-                #     a = list(positions_friends)
-                #     b = a.index(agent.name)
-                #     if b % 2 == 1 :
-                #         c = a[b + 1]
-                # d = 0
-                for agent in self.agents:
-                    position_friend = positions_friends.get(agent.name, agent.position_current)
-                    agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend, name_friend=None)
-            else:
-                for agent in self.agents:
-                    self.name_activity[agent.name] = agent.activity
-                    agent.step(step_current=self.step_counter % 2000)
-            #
-            if self.step_counter % 2000 == 0:
-                self.action = "reistijd"
-            elif self.step_counter % 2000 == 1000:
-                self.action = "vrienden maken"
-            elif self.step_counter % 2000 == 1500:
-                self.action = "middelen gebruiken"
-
-            # draw
             self.draw_cursor()
             self.draw_background()
+            ##
+            step_couner = self.step_counter % 2000
+            self.agents_positions = []
             for agent in self.agents:
+                self.activity = self.agents[0].name
+                if step_couner == 0:
+                    self.activity = "activiteit_kiezen"
+                elif step_couner == 1000:
+                    self.activity = "vrienden_maken"
+                    self.agents_positions = self.get_agents_positions()
+                elif step_couner == 1500:
+                    self.activity = "middelen_gebruiken"
+                else:
+                    self.activity = "idle"
+                agent.step(self.activity, self.agents_positions)
                 self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, str(agent), agent.action)
+                self.draw_textbox(agent.position_current, agent.name, agent.action)
             self.draw_step_info()
             pygame.display.flip()
             self.clock.tick(60)
@@ -180,7 +171,7 @@ class GUI:
         """Draws step information including time progression."""
         date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
         font = pygame.font.Font(None, 36)
-        step_text = f"{self.action}"
+        step_text = f"{self.step_counter % 2000}"
         week_text = f"Date: {date_format}"
 
         step_surface = font.render(step_text, True, (255, 255, 255))
@@ -311,33 +302,26 @@ class GUI:
                 all_positions[activity] = []
         return all_positions
 
-    def group_and_assign_positions(self):
+    def get_agents_positions(self):
         """
         Groups agents by activity and assigns them predefined positions from self.positions_friends.
         Returns a dictionary with agent names as keys and assigned positions as values.
         """
         agents_per_activity = defaultdict(list)
-
-        # Group agents by activity (ignoring "thuis")
-        for agent, activity in self.name_activity.items():
+        for agent in self.agents:  # groepeer agents per activiteit
+            activity = agent.activity
             if activity != "thuis":
                 agents_per_activity[activity].append(agent)
 
-        # Dictionary to store the agent name and its assigned position
         agent_positions = {}
-
         # Assign agents to positions from self.positions_friends
-        for activity, agents in agents_per_activity.items():
-            available_positions = self.positions_friends[activity]
-
-            # Shuffle agents to ensure randomness in assignments
+        for activity, agents in agents_per_activity.items():  # verwijs naar posities
+            positions_friends_activity = self.positions_friends[activity]
             random.shuffle(agents)
-
             for i, agent in enumerate(agents):
-                agent_position = available_positions[i]
-                agent_positions[agent] = agent_position  # Store agent name and assigned position
-
+                agent_position = positions_friends_activity[i]
+                agent_positions[agent] = agent_position  # sla agent name naam toegewezen position
         return agent_positions
 
     def __str__(self):
-        return str(f"{self.step_counter}")
+        return str(f"{self.step_counter}, {self.activity}")

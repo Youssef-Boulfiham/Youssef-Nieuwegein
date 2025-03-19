@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from collections import defaultdict
+
 rng = np.random.default_rng()
 import random
 import pandas as pd
@@ -38,69 +39,62 @@ class Agent:
         self.friends = []
         self.friend_request = {}
         self.neighbour = None
+        self.a = 0
 
-    def step(self, step_current, positions_friends=None, name_friend=None):
-        if step_current == 0:
-            position_goal, collors_allowed = self.choose_activity()
-        elif step_current == 1000:
-            position_goal, collors_allowed = positions_friends, [self.activities_colors[self.activity]]
-            self.make_friends(name_friend)
-        elif step_current == 1500:
-            position_goal, collors_allowed = self.substance_use()
-            pass
+    def step(self, activity, agents_positions):
+        if activity == "vrienden_maken":
+            position_end, colors_allowed = self.vrienden_maken(agents_positions)
+        elif activity in ["activiteit_kiezen"]:
+            position_end, colors_allowed = self.activiteit_kiezen()
         elif len(self.path) == 0:  # idle
-            if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans op stilstaan
-                self.path = [self.position_current] * random.randint(5, 25)  # sta stil
+            if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
+               print("a")
+               self.path = [self.position_current] * random.randint(5, 25)  # sta stil
             else:
-                position_goal, collors_allowed = self.get_position(), [self.activities_colors[self.activity]]
-        if "position_goal" in locals():
-            if position_goal is None:
-                a = 0
-            # noinspection PyUnboundLocalVariable
-            self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                     end=position_goal,
-                                                     collors_allowed=collors_allowed)
-        if step_current == 1000:
-            self.path += [positions_friends] * (500 - len(self.path))
+                print("b")
+                position_end, colors_allowed = self.get_position(), [self.activities_colors[self.activity]]  # random
+        if "position_end" in locals():
+            self.path += self.Pathfinding.search_path(start=self.position_current,
+                                                      end=position_end,
+                                                      collors_allowed=colors_allowed)
+
         if len(self.path) == 0:
-            a = 0
-        if self.path is None:
-            a = 0
+            a= 0
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
-        # if step_current == 0: # Let op!: niet efficient: gebruik % 1000 == 0 voor deze duplicate if
-        #     return self.name, self.activity
 
-    def choose_activity(self):
-        self.action = "traveling"
-        ### F=
-        self.path = []
+    # def idle(self):
+    #     if len(self.path) == 0:
+    #         if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
+    #             self.path = [self.position_current] * random.randint(5, 25)  # sta stil
+    #         return self.get_position(), [self.activities_colors[self.activity]]  # random
+
+    def activiteit_kiezen(self):
+        self.path = []  # reset
         activities = self.df.iloc[0, 7:].to_dict()
         activity_names = list(activities.keys())
         activity_probs = np.array(list(activities.values()))
         activity_probs /= activity_probs.sum()
         cumsum_activities = np.cumsum(activity_probs)
-        random_number = np.random.rand()
-        chosen_index = np.searchsorted(cumsum_activities, random_number)
-        activity_previous = self.activity  # onthou vorige activiteit
+        chosen_index = np.searchsorted(cumsum_activities, np.random.rand())
+        activity_previous = self.activity  # onthoudt vorige activiteit
         self.activity = activity_names[chosen_index]  # ga naar volgende activiteit
         ###
         # kies voor dichtsbijzijnde positie of willekeurig
         # als andere activiteit, loop dan naar ingang van volgende activiteit
         if self.activity != activity_previous:
-            position_goal = random.choice(self.activity_nodes[f"{activity_previous} {self.activity}"])
+            position_end = random.choice(self.activity_nodes[f"{activity_previous} {self.activity}"])
         # als zelfde activiteit, loop naar willeukeurige positie in activiteitsgebied
         else:
-            position_goal = self.get_position()
-        return (position_goal,
+            position_end = self.get_position()
+        return (position_end,
                 [self.activities_colors[activity_previous],
                  "black",
                  self.activities_colors[self.activity]])
 
-    def make_friends(self, name_friend):
-        self.action = "make friend"  # pictogram
-
-
+    def vrienden_maken(self, agents_positions):
+        self.path = []
+        a = 0
         # # Assign positions and handle friend requests
         # for i, agent in enumerate(agents):
         #     self.path.append(positions[i])
@@ -116,11 +110,12 @@ class Agent:
         #         else:
         #             self.friend_request[target_friend] = self.friend_request.get(target_friend, 0) + 1
         #         print(positions[i])
+
+        # gekozen positie, bijbehorende kleur
         return (self.get_position(),  # goal
                 [self.activities_colors[self.activity]])  # allowed_colors
 
-    def substance_use(self):
-        # self.action = "substance use"
+    def middelen_gebruiken(self):
         return (self.get_position(),  # goal
                 [self.activities_colors[self.activity]])  # allowed_collors
 
@@ -144,7 +139,7 @@ class Agent:
         # Als activiteit 'green' is, kies volledig willekeurig
         if color_current == "green":
             return random.choice(self.positions_color[color_current])[::-1]
-        return position_nearby[::-1]
+        return list(position_nearby[::-1])
 
     def get_positions_friends(self):
         activities = ["school", "vrienden thuis", "vrije tijd"]
@@ -161,4 +156,4 @@ class Agent:
         return all_positions
 
     def __str__(self):
-        return str(f"{self.name}")
+        return str(f"{self.name}, {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")
