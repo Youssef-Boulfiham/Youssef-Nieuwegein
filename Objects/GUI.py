@@ -90,6 +90,7 @@ class GUI:
             elif step_counter_mod == 1000 and not self.vrienden_maken_called:
                 self.activity = "vrienden_maken"
                 self.positions_end = self.get_positions_end()
+                self.vrienden_maken()
                 self.vrienden_maken_called = True
             elif step_counter_mod == 1500:
                 self.activity = "middelen_gebruiken"
@@ -106,23 +107,32 @@ class GUI:
             self.step_counter += 1
         pygame.quit()
 
+    import random
+
     def vrienden_maken(self):
         print(';')
-        # hoevaak gevraagd
+        # Ensure there is an even number of agents to avoid gaps
+        agents = list(self.positions_end.keys())
+        if len(agents) % 2 != 0:
+            print("Uneven number of agents, skipping pairing for one agent.")
+            agents = agents[:-1]  # Remove the last agent if there's an odd number
+        # Pair agents two at a time
         pairwise = lambda it: zip(*[iter(it)] * 2)
-        for agent_left_name, agent_right_name in pairwise(self.positions_end):
+        lst = []
+        for agent_left_name, agent_right_name in pairwise(agents):
             agent_left = self.agents[agent_left_name]
             agent_right = self.agents[agent_right_name]
+            # Check the conditions for making friends
             if agent_left.friend_request[agent_right_name] < 5 and \
-                    agent_right not in agent_left.friends and random.getrandbits(1):
+                    agent_right not in agent_left.friends and \
+                    random.getrandbits(1):  # Random chance for friendship
                 agent_left.friends.append(agent_right_name)
                 agent_right.friends.append(agent_left_name)
-                print(True)
+                lst.append(True)
             else:
-                print(False)
+                lst.append(False)
+        print(lst)
 
-        # pictogram
-        return 0
 
     def get_positions_end(self):
         """
