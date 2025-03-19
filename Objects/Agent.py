@@ -37,17 +37,15 @@ class Agent:
         self.path = []
         self.friends = []
         self.friend_request = {}
+        self.neighbour = None
 
-    def step(self, step_current, positions_friends=None):
-        # zo leeg mogelijk houden
+    def step(self, step_current, positions_friends=None, name_friend=None):
         if step_current == 0:
             position_goal, collors_allowed = self.choose_activity()
         elif step_current == 1000:
-            # meegeven
             position_goal, collors_allowed = positions_friends, [self.activities_colors[self.activity]]
-            self.make_friends()
+            self.make_friends(name_friend)
         elif step_current == 1500:
-            # self.action = "substance use"
             position_goal, collors_allowed = self.substance_use()
             pass
         elif len(self.path) == 0:  # idle
@@ -70,7 +68,7 @@ class Agent:
             a = 0
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
-        # if step_current == 0:  # Let op!: niet efficient: gebruik % 1000 == 0 voor deze duplicate if
+        # if step_current == 0: # Let op!: niet efficient: gebruik % 1000 == 0 voor deze duplicate if
         #     return self.name, self.activity
 
     def choose_activity(self):
@@ -99,68 +97,24 @@ class Agent:
                  "black",
                  self.activities_colors[self.activity]])
 
-    def make_friends(self):
+    def make_friends(self, name_friend):
         self.action = "make friend"  # pictogram
-        # """
-        # STR: updaten voor picrogtam
-        # """
-        # ####
-        # # input - waar zijn alle andere agents
-        # #       - wat doen alle andere agents
-        # #       - statistieken
-        # ####
-        # # loop agents
-        # # of not friend amd
-        # # friend_requests griend[agent[i]] and
-        # # activity_current == "thuis"
-        # # Let op!: loop naar elkaar toe
-        # #       - sta stil
-        # #          # pictogram
-        # #
-        # self.path = []
-        # # Group agents by activity, excluding "thuis"
+
+
+        # # Assign positions and handle friend requests
+        # for i, agent in enumerate(agents):
+        #     self.path.append(positions[i])
         #
-        # agents_per_activity = defaultdict(list)
+        #     # Only make friend requests if the agent hasn't asked too many times
+        #     if self.friend_request.get(agent, 0) < 5 and i > 0:
+        #         target_friend = agents[i - 1]  # The one to the left in sorted order
         #
-        # # Group agents by activity, excluding "thuis" activity
-        # for agent, activity in name_activity.items():
-        #     if activity != "thuis":
-        #         agents_per_activity[activity].append(agent)
-        #
-        # for activity, agents in agents_per_activity.items():
-        #     # If no agents are doing this activity, skip it
-        #     if not agents:
-        #         continue
-        #
-        #     agents.sort()  # Sort agents to determine the order
-        #
-        #     # Get the positions for the activity, handle empty list gracefully
-        #     positions = self.positions_friends.get(activity, [])
-        #
-        #     # Ensure we don't try to assign more positions than available
-        #     num_agents = len(agents)
-        #     num_positions = len(positions)
-        #     if num_agents > num_positions:
-        #         print(f"Warning: Not enough positions for {activity}, truncating to available positions.")
-        #         agents = agents[:num_positions]
-        #     elif num_agents < num_positions:
-        #         # In case there are more positions than agents, we can just ignore extra positions
-        #         positions = positions[:num_agents]
-        #
-        #     # Assign positions and handle friend requests
-        #     for i, agent in enumerate(agents):
-        #         self.path.append(positions[i])
-        #
-        #         # Only make friend requests if the agent hasn't asked too many times
-        #         if self.friend_request.get(agent, 0) < 5 and i > 0:
-        #             target_friend = agents[i - 1]  # The one to the left in sorted order
-        #
-        #             # Random chance to make a friend request or increment the request count
-        #             if random.random() < 0.5:
-        #                 print(True)
-        #                 self.friends.append(target_friend)
-        #             else:
-        #                 self.friend_request[target_friend] = self.friend_request.get(target_friend, 0) + 1
+        #         # Random chance to make a friend request or increment the request count
+        #         if random.random() < 0.5:
+        #             print(True)
+        #             self.friends.append(target_friend)
+        #         else:
+        #             self.friend_request[target_friend] = self.friend_request.get(target_friend, 0) + 1
         #         print(positions[i])
         return (self.get_position(),  # goal
                 [self.activities_colors[self.activity]])  # allowed_colors
@@ -169,9 +123,6 @@ class Agent:
         # self.action = "substance use"
         return (self.get_position(),  # goal
                 [self.activities_colors[self.activity]])  # allowed_collors
-
-    import random
-    import numpy as np
 
     def get_position(self):
         """Geeft een valide positie IN HUIDIGE ACTIVITEIT:
@@ -210,4 +161,4 @@ class Agent:
         return all_positions
 
     def __str__(self):
-        return str(f"{self.action}")
+        return str(f"{self.name}")

@@ -1,3 +1,4 @@
+import random
 import os
 import numpy as np
 import pygame
@@ -12,6 +13,7 @@ from collections import defaultdict
 class GUI:
     def __init__(self, agent_count, start_date, end_date, steps_max):
         self.name_activity = {}
+        self.action = "reistijd"
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -77,13 +79,27 @@ class GUI:
             #
             if self.step_counter % 2000 == 1000:
                 positions_friends = self.group_and_assign_positions()
+                # for agent in self.agents:
+                #     a = list(positions_friends)
+                #     b = a.index(agent.name)
+                #     if b % 2 == 1 :
+                #         c = a[b + 1]
+                # d = 0
                 for agent in self.agents:
                     position_friend = positions_friends.get(agent.name, agent.position_current)
-                    agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend)
+                    agent.step(step_current=self.step_counter % 2000, positions_friends=position_friend, name_friend=None)
             else:
                 for agent in self.agents:
                     self.name_activity[agent.name] = agent.activity
                     agent.step(step_current=self.step_counter % 2000)
+            #
+            if self.step_counter % 2000 == 0:
+                self.action = "reistijd"
+            elif self.step_counter % 2000 == 1000:
+                self.action = "vrienden maken"
+            elif self.step_counter % 2000 == 1500:
+                self.action = "middelen gebruiken"
+
             # draw
             self.draw_cursor()
             self.draw_background()
@@ -164,7 +180,7 @@ class GUI:
         """Draws step information including time progression."""
         date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
         font = pygame.font.Font(None, 36)
-        step_text = f"Step: {self.step_counter}"
+        step_text = f"{self.action}"
         week_text = f"Date: {date_format}"
 
         step_surface = font.render(step_text, True, (255, 255, 255))
@@ -185,7 +201,7 @@ class GUI:
     def draw_textbox(self, agent_position, text, action):
         fixed_font_size = 24  # Smaller font size
         font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(str(""), True, (255, 255, 255))
+        text_surface = font.render(str(text), True, (255, 255, 255))
         text_width, text_height = text_surface.get_size()
         fixed_padding = 2  # Reduced padding
         box_width = text_width + fixed_padding * 2
@@ -312,11 +328,16 @@ class GUI:
 
         # Assign agents to positions from self.positions_friends
         for activity, agents in agents_per_activity.items():
-            # Directly assign positions from self.positions_friends for the given activity
             available_positions = self.positions_friends[activity]
+
+            # Shuffle agents to ensure randomness in assignments
+            random.shuffle(agents)
 
             for i, agent in enumerate(agents):
                 agent_position = available_positions[i]
                 agent_positions[agent] = agent_position  # Store agent name and assigned position
 
         return agent_positions
+
+    def __str__(self):
+        return str(f"{self.step_counter}")
