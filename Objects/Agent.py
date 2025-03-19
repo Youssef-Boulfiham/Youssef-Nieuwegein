@@ -13,7 +13,8 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, positions_color, root):
+    def __init__(self, name, positions_color, root, agents_count):
+        # self.agents_count = agents_count
         self.root = root
         self.Pathfinding = AStar()
         self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
@@ -37,22 +38,24 @@ class Agent:
         self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
         self.path = []
         self.friends = []
-        self.friend_request = {}
+        self.friend_request = self.friend_request = {i: 0 for i in range(agents_count)}
         self.neighbour = None
         self.a = 0
 
-    def step(self, activity, agents_positions):
-        if activity == "vrienden_maken":
-            position_end, colors_allowed = self.vrienden_maken(agents_positions)
+    def step(self, activity, position_end):
+        # bepaal eindpunt
+        if activity == "vrienden_maken" and self.activity != "thuis":
+            self.vrienden_maken(position_end)
         elif activity in ["activiteit_kiezen"]:
             position_end, colors_allowed = self.activiteit_kiezen()
         elif len(self.path) == 0:  # idle
-            position_end, colors_allowed = self.idle() or (self.position_current, [self.activities_colors[self.activity]])
-        if "position_end" in locals():
+            position_end, colors_allowed = self.idle() or (
+                self.position_current, [self.activities_colors[self.activity]])
+        # bepaal route
+        if "colors_allowed" in locals():
             self.path += self.Pathfinding.search_path(start=self.position_current,
                                                       end=position_end,
                                                       collors_allowed=colors_allowed)
-
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
 
@@ -85,28 +88,11 @@ class Agent:
                  "black",
                  self.activities_colors[self.activity]])
 
-    def vrienden_maken(self, agents_positions):
-        self.path = []
-        a = 0
-        # # Assign positions and handle friend requests
-        # for i, agent in enumerate(agents):
-        #     self.path.append(positions[i])
-        #
-        #     # Only make friend requests if the agent hasn't asked too many times
-        #     if self.friend_request.get(agent, 0) < 5 and i > 0:
-        #         target_friend = agents[i - 1]  # The one to the left in sorted order
-        #
-        #         # Random chance to make a friend request or increment the request count
-        #         if random.random() < 0.5:
-        #             print(True)
-        #             self.friends.append(target_friend)
-        #         else:
-        #             self.friend_request[target_friend] = self.friend_request.get(target_friend, 0) + 1
-        #         print(positions[i])
-
-        # gekozen positie, bijbehorende kleur
-        return (self.get_position(),  # goal
-                [self.activities_colors[self.activity]])  # allowed_colors
+    def vrienden_maken(self, position_end):
+        self.path = self.Pathfinding.search_path(start=self.position_current,
+                                                      end=position_end,
+                                                      collors_allowed=[self.activities_colors[self.activity]])
+        self.path += [position_end] * (500 - len(self.path))
 
     def middelen_gebruiken(self):
         return (self.get_position(),  # goal

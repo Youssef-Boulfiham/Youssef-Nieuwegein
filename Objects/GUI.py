@@ -8,6 +8,7 @@ from Objects.Agent import Agent
 import ast
 import json
 from collections import defaultdict
+from itertools import tee
 
 
 class GUI:
@@ -32,7 +33,7 @@ class GUI:
         positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
         self.agents_count = agents_count
-        self.agents = [Agent(i, positions_color, self.root) for i in range(agents_count)]  # statitieken
+        self.agents = [Agent(i, positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
@@ -81,33 +82,123 @@ class GUI:
             self.draw_cursor()
             self.draw_background()
             ##
-            step_couner = self.step_counter % 2000
-            self.agents_positions = []
+            step_counter_mod = self.step_counter % 2000
+            self.activity = "idle"
+            self.vrienden_maken_called = False
+            if step_counter_mod == 0:
+                self.activity = "activiteit_kiezen"
+            elif step_counter_mod == 1000 and not self.vrienden_maken_called:
+                self.activity = "vrienden_maken"
+                self.positions_end = self.get_positions_end()
+                self.vrienden_maken_called = True
+            elif step_counter_mod == 1500:
+                self.activity = "middelen_gebruiken"
+
+            # Run the agent steps after assigning activity
             for agent in self.agents:
-                self.activity = self.agents[0].name
-                if step_couner == 0:
-                    self.activity = "activiteit_kiezen"
-                elif step_couner == 1000:
-                    self.activity = "vrienden_maken"
-                    self.agents_positions = self.get_agents_positions()
-                elif step_couner == 1500:
-                    self.activity = "middelen_gebruiken"
-                else:
-                    self.activity = "idle"
-                agent.step(self.activity, self.agents_positions)
+                agent_position = self.positions_end.get(agent.name, agent.position_current)
+                agent.step(self.activity, agent_position)
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, agent.name, agent.action)
             self.draw_step_info()
             pygame.display.flip()
-            self.clock.tick(60)
+            self.clock.tick(600)
             self.step_counter += 1
         pygame.quit()
+
+    def vrienden_maken(self):
+        print(';')
+        # hoevaak gevraagd
+        pairwise = lambda it: zip(*[iter(it)] * 2)
+        for agent_left_name, agent_right_name in pairwise(self.positions_end):
+            agent_left = self.agents[agent_left_name]
+            agent_right = self.agents[agent_right_name]
+            if agent_left.friend_request[agent_right_name] < 5 and \
+                    agent_right not in agent_left.friends and random.getrandbits(1):
+                agent_left.friends.append(agent_right_name)
+                agent_right.friends.append(agent_left_name)
+                print(True)
+            else:
+                print(False)
+
+        # pictogram
+        return 0
+
+    def get_positions_end(self):
+        """
+        Groups agents by activity and assigns them predefined positions from self.positions_friends.
+        Returns a dictionary with agent names as keys and assigned positions as values.
+        """
+        agents_per_activity = defaultdict(list)
+        for agent in self.agents:  # groepeer agents per activiteit
+            activity = agent.activity
+            if activity != "thuis":
+                agents_per_activity[activity].append(agent.name)
+
+        agents_positions = {}
+        # Assign agents to positions from self.positions_friends
+        for activity, agents in agents_per_activity.items():
+            positions_friends_activity = self.positions_friends[activity]  # valide posities per activiteit
+            random.shuffle(agents)
+            for i, agent in enumerate(agents):
+                agent_position = positions_friends_activity[i]
+                agents_positions[agent] = agent_position  # sla agent name naam toegewezen position
+        return agents_positions
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
         self.cursor_offset[0] -= dx * self.cursor_step * self.cursor_zoom
         self.cursor_offset[1] -= dy * self.cursor_step * self.cursor_zoom
         self.clamp()
+
+    def draw_step_info(self):
+        """Draws step information including time progression."""
+        date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
+        font = pygame.font.Font(None, 36)
+        step_text = f"{self.step_counter % 2000}"
+        week_text = f"Date: {date_format}"
+
+        step_surface = font.render(step_text, True, (255, 255, 255))
+        week_surface = font.render(week_text, True, (255, 255, 255))
+
+        base_width = 230
+        box_width = int(base_width * 1.25)
+        box_height = step_surface.get_height() + week_surface.get_height() + 30
+        box_x, box_y = 10, 10
+        text_x = box_x + 10
+        step_y = box_y + 10
+        week_y = step_y + step_surface.get_height() + 10
+
+        pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
+        self.screen.blit(step_surface, (text_x, step_y))
+        self.screen.blit(week_surface, (text_x, week_y))
+
+    def draw_textbox(self, agent_position, text, action):
+        fixed_font_size = 24  # Smaller font size
+        font = pygame.font.Font(None, fixed_font_size)
+        text_surface = font.render(str(text), True, (255, 255, 255))
+        text_width, text_height = text_surface.get_size()
+        fixed_padding = 2  # Reduced padding
+        box_width = text_width + fixed_padding * 2
+        box_height = text_height + fixed_padding * 2
+        image_path = os.path.join(self.root, f"graphics/{action}.png")
+        pictogram = pygame.image.load(image_path)
+        pictogram = pygame.transform.scale(pictogram, (20, 20))  # Resize if needed
+        box_width += 24  # Add extra space for the pictogram
+        box_height = max(box_height, 24)  # Ensure enough height
+        screen_x = agent_position[1] * self.cursor_zoom - self.cursor_offset[0]
+        screen_y = agent_position[0] * self.cursor_zoom - self.cursor_offset[1]
+        box_x = screen_x - box_width // 2
+        box_y = screen_y - 30 - box_height
+        textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
+        textbox_surface.fill((181, 101, 29, 128))  # Light brown with 50% transparency
+        self.screen.blit(textbox_surface, (box_x, box_y))
+        if pictogram:
+            self.screen.blit(pictogram, (box_x + fixed_padding, box_y + (box_height - 20) // 2))
+            text_x = box_x + fixed_padding + 24  # Shift text right if pictogram is present
+        else:
+            text_x = box_x + fixed_padding
+        self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
     def zoom(self, direction):
         """Zoom in/out at the cursor's current position."""
@@ -166,55 +257,6 @@ class GUI:
         scaled_image = pygame.transform.scale(self.image_agent, (
             int(self.image_agent_width * scale_factor), int(self.image_agent_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
-
-    def draw_step_info(self):
-        """Draws step information including time progression."""
-        date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
-        font = pygame.font.Font(None, 36)
-        step_text = f"{self.step_counter % 2000}"
-        week_text = f"Date: {date_format}"
-
-        step_surface = font.render(step_text, True, (255, 255, 255))
-        week_surface = font.render(week_text, True, (255, 255, 255))
-
-        base_width = 230
-        box_width = int(base_width * 1.25)
-        box_height = step_surface.get_height() + week_surface.get_height() + 30
-        box_x, box_y = 10, 10
-        text_x = box_x + 10
-        step_y = box_y + 10
-        week_y = step_y + step_surface.get_height() + 10
-
-        pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
-        self.screen.blit(step_surface, (text_x, step_y))
-        self.screen.blit(week_surface, (text_x, week_y))
-
-    def draw_textbox(self, agent_position, text, action):
-        fixed_font_size = 24  # Smaller font size
-        font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(str(text), True, (255, 255, 255))
-        text_width, text_height = text_surface.get_size()
-        fixed_padding = 2  # Reduced padding
-        box_width = text_width + fixed_padding * 2
-        box_height = text_height + fixed_padding * 2
-        image_path = os.path.join(self.root, f"graphics/{action}.png")
-        pictogram = pygame.image.load(image_path)
-        pictogram = pygame.transform.scale(pictogram, (20, 20))  # Resize if needed
-        box_width += 24  # Add extra space for the pictogram
-        box_height = max(box_height, 24)  # Ensure enough height
-        screen_x = agent_position[1] * self.cursor_zoom - self.cursor_offset[0]
-        screen_y = agent_position[0] * self.cursor_zoom - self.cursor_offset[1]
-        box_x = screen_x - box_width // 2
-        box_y = screen_y - 30 - box_height
-        textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
-        textbox_surface.fill((181, 101, 29, 128))  # Light brown with 50% transparency
-        self.screen.blit(textbox_surface, (box_x, box_y))
-        if pictogram:
-            self.screen.blit(pictogram, (box_x + fixed_padding, box_y + (box_height - 20) // 2))
-            text_x = box_x + fixed_padding + 24  # Shift text right if pictogram is present
-        else:
-            text_x = box_x + fixed_padding
-        self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
     def set_collision(self):
         colors_possible = [['red'], ['green'], ['blue'], ['red dark'],
@@ -301,27 +343,6 @@ class GUI:
                 print(f"\033[93mposities-activiteit-{activity} nog niet geschreven\033[0m")
                 all_positions[activity] = []
         return all_positions
-
-    def get_agents_positions(self):
-        """
-        Groups agents by activity and assigns them predefined positions from self.positions_friends.
-        Returns a dictionary with agent names as keys and assigned positions as values.
-        """
-        agents_per_activity = defaultdict(list)
-        for agent in self.agents:  # groepeer agents per activiteit
-            activity = agent.activity
-            if activity != "thuis":
-                agents_per_activity[activity].append(agent)
-
-        agent_positions = {}
-        # Assign agents to positions from self.positions_friends
-        for activity, agents in agents_per_activity.items():  # verwijs naar posities
-            positions_friends_activity = self.positions_friends[activity]
-            random.shuffle(agents)
-            for i, agent in enumerate(agents):
-                agent_position = positions_friends_activity[i]
-                agent_positions[agent] = agent_position  # sla agent name naam toegewezen position
-        return agent_positions
 
     def __str__(self):
         return str(f"{self.step_counter}, {self.activity}")
