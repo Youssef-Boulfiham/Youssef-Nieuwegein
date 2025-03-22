@@ -14,6 +14,7 @@ from itertools import tee
 class GUI:
     def __init__(self, agents_count, start_date, end_date, steps_max):
         self.name_activity = {}
+        self.action = False
         self.activity = "idle"
         #
         self.colors = {
@@ -29,7 +30,7 @@ class GUI:
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.set_collision()
         self.set_positions()
-        self.set_positions_friends()
+        # self.set_positions_friends()
         positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
         self.agents_count = agents_count
@@ -46,6 +47,10 @@ class GUI:
         self.cursor_step = 10
         self.cursor_color = (255, 0, 0)
         self.cursor_offset = [0, 0]
+        self.pictogram_cache = {}  # Cache for loaded pictograms
+        self.textbox_color = (181, 101, 29, 128)  # Textbox color with transparency
+        self.pictogram_size = (20, 20)  # Fixed pictogram size
+
         # pygame
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
@@ -58,6 +63,8 @@ class GUI:
         # agent
         self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
+        self.font = pygame.font.Font(None, 24)  # Load font once
+
         #
         running = True
         self.step_counter = 1000
@@ -84,75 +91,147 @@ class GUI:
             ##
             step_counter_mod = self.step_counter % 2000
             self.activity = "idle"
-            self.vrienden_maken_called = False
             if step_counter_mod == 0:
+                self.action = True
                 self.activity = "activiteit_kiezen"
-            elif step_counter_mod == 1000 and not self.vrienden_maken_called:
+            elif step_counter_mod == 1000:
+                self.action = False
                 self.activity = "vrienden_maken"
                 self.positions_end = self.get_positions_end()
+            elif step_counter_mod == 1250:
                 self.vrienden_maken()
-                self.vrienden_maken_called = True
+                self.action = True
+            elif step_counter_mod == 1450:
+                self.action = False
+                self.set_agents_actions_false()
             elif step_counter_mod == 1500:
                 self.activity = "middelen_gebruiken"
-
-            # Run the agent steps after assigning activity
+            elif step_counter_mod == 1750:
+                self.action = True
+            elif step_counter_mod == 1950:
+                self.action = False
+            #
             for agent in self.agents:
                 agent_position = self.positions_end.get(agent.name, agent.position_current)
                 agent.step(self.activity, agent_position)
                 self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, agent.name, agent.action)
+                self.draw_textbox(agent.position_current, text="", action=agent.action)
+
             self.draw_step_info()
             pygame.display.flip()
             self.clock.tick(600)
             self.step_counter += 1
         pygame.quit()
 
-    import random
-
     def vrienden_maken(self):
         print(';')
-        # Ensure there is an even number of agents to avoid gaps
         agents = list(self.positions_end.keys())
+
+        # Ensure an even number of agents
         if len(agents) % 2 != 0:
             print("Uneven number of agents, skipping pairing for one agent.")
-            agents = agents[:-1]  # Remove the last agent if there's an odd number
-        # Pair agents two at a time
-        pairwise = lambda it: zip(*[iter(it)] * 2)
-        lst = []
+            agents = agents[:-1]
+
+        pairwise = lambda it: zip(*[iter(it)] * 2)  # verkeerd
+        friendship_status = {}
+
         for agent_left_name, agent_right_name in pairwise(agents):
             agent_left = self.agents[agent_left_name]
             agent_right = self.agents[agent_right_name]
-            # Check the conditions for making friends
-            if agent_left.friend_request[agent_right_name] < 5 and \
-                    agent_right not in agent_left.friends and \
-                    random.getrandbits(1):  # Random chance for friendship
+
+            # Enforce strict friendship limits
+            if agent_left.friend_request.get(agent_right_name, 0) < 5 and \
+                    agent_right_name not in agent_left.friends and \
+                    len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
+                    random.getrandbits(1):
+
                 agent_left.friends.append(agent_right_name)
                 agent_right.friends.append(agent_left_name)
-                lst.append(True)
-            else:
-                lst.append(False)
-        print(lst)
 
+                agent_left.action, agent_right.action = "checkmark", "checkmark"
+                friendship_status[agent_left_name] = True
+                friendship_status[agent_right_name] = True
+                print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
+            else:
+                friendship_status[agent_left_name] = False
+                friendship_status[agent_right_name] = False
+
+        # print(friendship_status)
+
+
+
+    def set_agents_actions_false(self):
+        for agent in self.agents:
+            agent.action = False
+
+    def draw_textbox(self, position, text, action):
+        # Ensure text is a string and check if there's anything to display
+        text = str(text).strip()
+        show_pictogram = self.action and bool(action)
+
+        if not text and not show_pictogram:
+            return  # Nothing to display
+
+        # Render text if it's not empty
+        text_surface = self.font.render(text, True, (255, 255, 255)) if text else None
+        text_width, text_height = text_surface.get_size() if text_surface else (0, 0)
+
+        # Calculate box size
+        pictogram_width = 24 if show_pictogram else 0
+        box_width = text_width + pictogram_width + 4
+        box_height = max(text_height + 4, 24)
+
+        # Calculate position
+        screen_x = position[1] * self.cursor_zoom - self.cursor_offset[0]
+        screen_y = position[0] * self.cursor_zoom - self.cursor_offset[1]
+        box_x = screen_x - box_width // 2
+        box_y = screen_y - 30 - box_height
+
+        # Create surface if size changes
+        if not hasattr(self, 'textbox_surface') or self.textbox_surface.get_size() != (box_width, box_height):
+            self.textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
+        self.textbox_surface.fill(self.textbox_color)
+        self.screen.blit(self.textbox_surface, (box_x, box_y))
+
+        # Draw pictogram if needed
+        text_x = box_x + 2
+        if show_pictogram:
+            if action not in self.pictogram_cache:
+                self.pictogram_cache[action] = pygame.transform.scale(
+                    pygame.image.load(os.path.join(self.root, f"graphics/{action}.png")),
+                    self.pictogram_size
+                )
+            self.screen.blit(self.pictogram_cache[action], (text_x, box_y + (box_height - self.pictogram_size[1]) // 2))
+            text_x += 24
+
+        # Draw text if available
+        if text_surface:
+            self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
+
+    import random
+    from collections import defaultdict
 
     def get_positions_end(self):
-        """
-        Groups agents by activity and assigns them predefined positions from self.positions_friends.
-        Returns a dictionary with agent names as keys and assigned positions as values.
-        """
         agents_per_activity = defaultdict(list)
-        for agent in self.agents:  # groepeer agents per activiteit
+        for agent in self.agents:
             activity = agent.activity
             if activity != "thuis":
                 agents_per_activity[activity].append(agent.name)
 
         agents_positions = {}
-        # Assign agents to positions from self.positions_friends
+
         for activity, agents in agents_per_activity.items():
-            positions_friends_activity = self.positions_friends[activity]  # valide posities per activiteit
+            positions_friends_activity = self.positions_friends[activity]
             random.shuffle(agents)
+
+            # Ensure even count by removing the last agent if odd
+            if len(agents) % 2 != 0:
+                agents.pop()
+
+            # Assign positions in pairs
             for i, agent in enumerate(agents):
-                agent_position = positions_friends_activity[i]
-                agents_positions[agent] = agent_position  # sla agent name naam toegewezen position
+                agents_positions[agent] = positions_friends_activity[i]
+
         return agents_positions
 
     def move_cursor(self, dx, dy):
@@ -182,33 +261,6 @@ class GUI:
         pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
         self.screen.blit(step_surface, (text_x, step_y))
         self.screen.blit(week_surface, (text_x, week_y))
-
-    def draw_textbox(self, agent_position, text, action):
-        fixed_font_size = 24  # Smaller font size
-        font = pygame.font.Font(None, fixed_font_size)
-        text_surface = font.render(str(text), True, (255, 255, 255))
-        text_width, text_height = text_surface.get_size()
-        fixed_padding = 2  # Reduced padding
-        box_width = text_width + fixed_padding * 2
-        box_height = text_height + fixed_padding * 2
-        image_path = os.path.join(self.root, f"graphics/{action}.png")
-        pictogram = pygame.image.load(image_path)
-        pictogram = pygame.transform.scale(pictogram, (20, 20))  # Resize if needed
-        box_width += 24  # Add extra space for the pictogram
-        box_height = max(box_height, 24)  # Ensure enough height
-        screen_x = agent_position[1] * self.cursor_zoom - self.cursor_offset[0]
-        screen_y = agent_position[0] * self.cursor_zoom - self.cursor_offset[1]
-        box_x = screen_x - box_width // 2
-        box_y = screen_y - 30 - box_height
-        textbox_surface = pygame.Surface((box_width, box_height), pygame.SRCALPHA)
-        textbox_surface.fill((181, 101, 29, 128))  # Light brown with 50% transparency
-        self.screen.blit(textbox_surface, (box_x, box_y))
-        if pictogram:
-            self.screen.blit(pictogram, (box_x + fixed_padding, box_y + (box_height - 20) // 2))
-            text_x = box_x + fixed_padding + 24  # Shift text right if pictogram is present
-        else:
-            text_x = box_x + fixed_padding
-        self.screen.blit(text_surface, (text_x, box_y + fixed_padding))
 
     def zoom(self, direction):
         """Zoom in/out at the cursor's current position."""

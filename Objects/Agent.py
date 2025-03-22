@@ -33,14 +33,14 @@ class Agent:
         #
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
-        self.action = "idle"
+        self.action = None
         self.activity = random.choice(["school", "vrije tijd"])
         self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
         self.path = []
         self.friends = []
         self.friend_request = self.friend_request = {i: 0 for i in range(agents_count)}
         self.neighbour = None
-        self.a = 0
+        self.a = []
 
     def step(self, activity, position_end):
         # bepaal eindpunt
@@ -90,8 +90,8 @@ class Agent:
 
     def vrienden_maken(self, position_end):
         self.path = self.Pathfinding.search_path(start=self.position_current,
-                                                      end=position_end,
-                                                      collors_allowed=[self.activities_colors[self.activity]])
+                                                 end=position_end,
+                                                 collors_allowed=[self.activities_colors[self.activity]])
         self.path += [position_end] * (500 - len(self.path))
 
     def middelen_gebruiken(self):
@@ -135,4 +135,5 @@ class Agent:
         return all_positions
 
     def __str__(self):
-        return str(f"{self.name}, {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")
+        return str(
+            f"{self.name}, {len(self.friends)} {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")
