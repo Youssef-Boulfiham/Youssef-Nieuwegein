@@ -13,7 +13,7 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, positions_color, root, agents_count):
+    def __init__(self, name, age, positions_color, root, agents_count):
         # self.agents_count = agents_count
         self.root = root
         self.Pathfinding = AStar()
@@ -33,6 +33,7 @@ class Agent:
         #
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
+        self.age = age
         self.action = None
         self.activity = random.choice(["school", "vrije tijd"])
         self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
@@ -43,19 +44,32 @@ class Agent:
         self.a = []
 
     def step(self, activity, position_end):
-        # bepaal eindpunt
+        # Initialize colors_allowed to None (position_end is passed as an input)
+        colors_allowed = None
+
+        # Handle different activities
         if activity == "vrienden_maken" and self.activity != "thuis":
+            # Use the input parameter position_end directly for vrienden_maken
             self.vrienden_maken(position_end)
         elif activity in ["activiteit_kiezen"]:
             position_end, colors_allowed = self.activiteit_kiezen()
         elif len(self.path) == 0:  # idle
-            position_end, colors_allowed = self.idle() or (
-                self.position_current, [self.activities_colors[self.activity]])
-        # bepaal route
-        if "colors_allowed" in locals():
+            result = self.idle()  # Get the result from idle
+            if result:  # Only define position_end and colors_allowed if idle() returns something
+                position_end, colors_allowed = result
+            else:
+                # Fallback: Use current position and color
+                position_end, colors_allowed = self.position_current, [self.activities_colors[self.activity]]
+
+        # Make sure position_end and colors_allowed are defined before using them
+        if position_end is not None and colors_allowed is not None:
             self.path += self.Pathfinding.search_path(start=self.position_current,
                                                       end=position_end,
                                                       collors_allowed=colors_allowed)
+
+        if len(self.path) == 0:
+            a = 0  # If path is empty, handle this case
+
         self.position_current = tuple(self.path[0])
         self.path.pop(0)
 
@@ -89,6 +103,8 @@ class Agent:
                  self.activities_colors[self.activity]])
 
     def vrienden_maken(self, position_end):
+        if position_end == None:
+            a=0
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  end=position_end,
                                                  collors_allowed=[self.activities_colors[self.activity]])
@@ -134,6 +150,10 @@ class Agent:
                 all_positions[activity] = []
         return all_positions
 
+    def __repr__(self):
+        return (f"'{self.name}', {self.age}, {len(self.friends)}, "
+                f"{self.position_current}, {len(self.path)}, '{self.activity}', '{self.action}'")
+
     def __str__(self):
         return str(
-            f"{self.name}, {len(self.friends)} {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")
+            f"{self.name}, {self.age}, {len(self.friends)}, {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")

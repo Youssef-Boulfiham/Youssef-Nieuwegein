@@ -16,6 +16,8 @@ class GUI:
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
+        self.age_counts = {12: 4, 13: 4, 14: 4, 15: 3, 16: 3, 17: 3, 18: 3}
+        self.binge_drinkers = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -29,12 +31,13 @@ class GUI:
         }
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.set_collision()
-        self.set_positions()
+        # self.set_positions()
         # self.set_positions_friends()
-        positions_color = self.get_positions()
+        self.positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
         self.agents_count = agents_count
-        self.agents = [Agent(i, positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
+        # self.agents = [Agent(positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
+        self.agents = self.get_agents()
         self.step_counter = 1
         self.date_current = start_date
         self.start_date = start_date
@@ -67,7 +70,7 @@ class GUI:
 
         #
         running = True
-        self.step_counter = 1000
+        self.step_counter = 1
         while running:
             self.date_current = self.start_date + (self.time_per_step * self.step_counter)
             for event in pygame.event.get():
@@ -106,14 +109,17 @@ class GUI:
                 self.set_agents_actions_false()
             elif step_counter_mod == 1500:
                 self.activity = "middelen_gebruiken"
+                self.middelen_gebruiken()
             elif step_counter_mod == 1750:
                 self.action = True
             elif step_counter_mod == 1950:
                 self.action = False
             #
             for agent in self.agents:
-                agent_position = self.positions_end.get(agent.name, agent.position_current)
-                agent.step(self.activity, agent_position)
+                agent_position_end = None
+                if self.activity == "vrienden_maken":
+                    agent_position_end = self.positions_end.get(agent.name, agent.position_current)
+                agent.step(self.activity, agent_position_end)
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, text="", action=agent.action)
 
@@ -124,13 +130,12 @@ class GUI:
         pygame.quit()
 
     def vrienden_maken(self):
-        print(';')
         agents = list(self.positions_end.keys())
 
         # Ensure an even number of agents
-        if len(agents) % 2 != 0:
-            print("Uneven number of agents, skipping pairing for one agent.")
-            agents = agents[:-1]
+        # if len(agents) % 2 != 0:
+        #     print("Uneven number of agents, skipping pairing for one agent.")
+            # agents = agents[:-1]
 
         pairwise = lambda it: zip(*[iter(it)] * 2)  # verkeerd
         friendship_status = {}
@@ -151,14 +156,24 @@ class GUI:
                 agent_left.action, agent_right.action = "checkmark", "checkmark"
                 friendship_status[agent_left_name] = True
                 friendship_status[agent_right_name] = True
-                print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
+                # print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
             else:
                 friendship_status[agent_left_name] = False
                 friendship_status[agent_right_name] = False
 
         # print(friendship_status)
 
+    def middelen_gebruiken(self):
+        substance = "alcohol"
 
+        for agent in self.agents:
+            # print(agent.age, self.binge_drinkers[agent.age], 24, self.age_counts[agent.age], self.binge_drinkers[agent.age]/24/self.age_counts[agent.age])
+            rn = round(random.uniform(1, 100), 1)
+            # F= percentage bingedrinkers gegeven leeftijd / aantal agents gegeven leeftijd/ 4 weken
+            threshold = self.binge_drinkers[agent.age]/ self.age_counts[agent.age] / 24
+            change = True if threshold >= rn else False
+            print(True)
+        return 0
 
     def set_agents_actions_false(self):
         for agent in self.agents:
@@ -212,15 +227,15 @@ class GUI:
     from collections import defaultdict
 
     def get_positions_end(self):
-        agents_per_activity = defaultdict(list)
+        activity_names = defaultdict(list)
         for agent in self.agents:
             activity = agent.activity
             if activity != "thuis":
-                agents_per_activity[activity].append(agent.name)
+                activity_names[activity].append(agent.name)
 
         agents_positions = {}
 
-        for activity, agents in agents_per_activity.items():
+        for activity, agents in activity_names.items():
             positions_friends_activity = self.positions_friends[activity]
             random.shuffle(agents)
 
@@ -406,5 +421,24 @@ class GUI:
                 all_positions[activity] = []
         return all_positions
 
+    def get_agents(self):
+        agents = []  # Store agents in a list
+        agent_counter = 0  # To keep track of agent names from 0 to total count
+
+        for age, count in self.age_counts.items():  # Loop through age and count
+            for _ in range(count):
+                agents.append(Agent(
+                    name=agent_counter,  # Assign sequential name
+                    age=age,  # Assign the correct age from the dictionary
+                    positions_color=self.positions_color,
+                    root=self.root,
+                    agents_count=self.agents_count
+                ))
+                agent_counter += 1
+        return agents
+
+    def __repr__(self):
+        return f"{self.step_counter}, '{self.activity}'"
+
     def __str__(self):
-        return str(f"{self.step_counter}, {self.activity}")
+        return f"{self.step_counter}, {self.activity}"
