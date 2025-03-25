@@ -11,13 +11,13 @@ from collections import defaultdict
 from itertools import tee
 
 
-class GUI:
+class Env:
     def __init__(self, agents_count, start_date, end_date, steps_max):
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
         self.age_counts = {12: 4, 13: 4, 14: 4, 15: 3, 16: 3, 17: 3, 18: 3}
-        self.binge_drinkers = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -164,15 +164,17 @@ class GUI:
         # print(friendship_status)
 
     def middelen_gebruiken(self):
+        """TEST DIT IN NOTEBOOK"""
         substance = "alcohol"
 
         for agent in self.agents:
-            # print(agent.age, self.binge_drinkers[agent.age], 24, self.age_counts[agent.age], self.binge_drinkers[agent.age]/24/self.age_counts[agent.age])
+            # print(agent.age, self.binge_percentages[agent.age], 24, self.age_counts[agent.age], self.binge_percentages[agent.age]/24/self.age_counts[agent.age])
             rn = round(random.uniform(1, 100), 1)
             # F= percentage bingedrinkers gegeven leeftijd / aantal agents gegeven leeftijd/ 4 weken
-            threshold = self.binge_drinkers[agent.age]/ self.age_counts[agent.age] / 24
+            threshold = self.binge_percentages[agent.age] / 24
             change = True if threshold >= rn else False
-            print(True)
+            if change == True:
+                print(rn, change)
         return 0
 
     def set_agents_actions_false(self):
