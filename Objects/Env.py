@@ -12,11 +12,12 @@ from itertools import tee
 
 
 class Env:
-    def __init__(self, agents_count, start_date, end_date, steps_max):
+    def __init__(self, start_date, end_date, steps_max):
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
-        self.age_counts = {12: 4, 13: 4, 14: 4, 15: 3, 16: 3, 17: 3, 18: 3}
+        self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
@@ -35,7 +36,7 @@ class Env:
         # self.set_positions_friends()
         self.positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
-        self.agents_count = agents_count
+        self.agents_count = sum(self.age_counts.values())
         # self.agents = [Agent(positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
         self.agents = self.get_agents()
         self.step_counter = 1
@@ -409,6 +410,8 @@ class Env:
             with open(file_path, "w") as f:
                 f.write(str(positions))
 
+    import os
+
     def get_positions_friends(self):
         activities = ["school", "vriend thuis", "vrije tijd"]
         all_positions = {}  # Change this to a dictionary instead of a list
@@ -416,10 +419,14 @@ class Env:
             file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
             try:
                 with open(file_path, "r") as f:
-                    positions = ast.literal_eval(f.read())
+                    # Read the file and process each line as a tuple
+                    positions = [tuple(map(int, line.strip().strip('()').split(','))) for line in f.readlines()]
                     all_positions[activity] = positions
             except FileNotFoundError:
                 print(f"\033[93mposities-activiteit-{activity} nog niet geschreven\033[0m")
+                all_positions[activity] = []
+            except ValueError as e:
+                print(f"\033[91mError processing file for activity {activity}: {e}\033[0m")
                 all_positions[activity] = []
         return all_positions
 
