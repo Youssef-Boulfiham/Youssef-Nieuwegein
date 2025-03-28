@@ -9,10 +9,11 @@ import ast
 import json
 from collections import defaultdict
 from itertools import tee
+from datetime import datetime, timedelta
 
 
 class Env:
-    def __init__(self, start_date, end_date, steps_max):
+    def __init__(self, start_date, epochs, steps_per_day=4000, breakpoint_time=None):
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
@@ -39,12 +40,6 @@ class Env:
         self.agents_count = sum(self.age_counts.values())
         # self.agents = [Agent(positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
         self.agents = self.get_agents()
-        self.step_counter = 1
-        self.date_current = start_date
-        self.start_date = start_date
-        self.end_date = end_date
-        self.steps_max = steps_max
-        self.time_per_step = (end_date - start_date) / steps_max
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
         self.cursor_size = 10
@@ -54,7 +49,7 @@ class Env:
         self.pictogram_cache = {}  # Cache for loaded pictograms
         self.textbox_color = (181, 101, 29, 128)  # Textbox color with transparency
         self.pictogram_size = (20, 20)  # Fixed pictogram size
-
+        #
         # pygame
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
@@ -68,12 +63,22 @@ class Env:
         self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         self.font = pygame.font.Font(None, 24)  # Load font once
-
         #
-        running = True
-        self.step_counter = 1
-        while running:
-            self.date_current = self.start_date + (self.time_per_step * self.step_counter)
+        # step
+        self.epochs = epochs
+        self.steps_per_day = steps_per_day
+        self.steps_per_week = self.steps_per_day * 7
+        self.steps_per_epoch = self.steps_per_week * 4
+        self.step = 0
+        self.step_current = 0
+        # time
+        self.start_date = start_date
+        self.date_current = start_date
+        self.breakpoint_time = breakpoint_time  # Time to trigger breakpoint
+        while True:
+            print(self)
+            self.set_time()
+            # self.check_breakpoint()  # Check if we are at the breakpoint
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -93,41 +98,39 @@ class Env:
             self.draw_cursor()
             self.draw_background()
             ##
-            step_counter_mod = self.step_counter % 2000
             self.activity = "idle"
-            if step_counter_mod == 0:
-                self.action = True
-                self.activity = "activiteit_kiezen"
-            elif step_counter_mod == 1000:
-                self.action = False
-                self.activity = "vrienden_maken"
-                self.positions_end = self.get_positions_end()
-            elif step_counter_mod == 1250:
-                self.vrienden_maken()
-                self.action = True
-            elif step_counter_mod == 1450:
-                self.action = False
-                self.set_agents_actions_false()
-            elif step_counter_mod == 1500:
-                self.activity = "middelen_gebruiken"
-                self.middelen_gebruiken()
-            elif step_counter_mod == 1750:
-                self.action = True
-            elif step_counter_mod == 1950:
-                self.action = False
-            #
-            for agent in self.agents:
-                agent_position_end = None
-                if self.activity == "vrienden_maken":
-                    agent_position_end = self.positions_end.get(agent.name, agent.position_current)
-                agent.step(self.activity, agent_position_end)
-                self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, text="", action=agent.action)
+            # if self.step_current == 0:
+            #     self.action = True
+            #     self.activity = "activiteit_kiezen"
+            # elif self.step_current == 1000:
+            #     self.action = False
+            #     self.activity = "vrienden_maken"
+            #     self.positions_end = self.get_positions_end()
+            # elif self.step_current == 1250:
+            #     self.vrienden_maken()
+            #     self.action = True
+            # elif self.step_current == 1450:
+            #     self.action = False
+            #     self.set_agents_actions_false()
+            # elif self.step_current == 1500:
+            #     self.activity = "middelen_gebruiken"
+            #     self.middelen_gebruiken()
+            # elif self.step_current == 1750:
+            #     self.action = True
+            # elif self.step_current == 1950:
+            #     self.action = False
+            # #
+            # for agent in self.agents:
+            #     agent_position_end = None
+            #     if self.activity == "vrienden_maken":
+            #         agent_position_end = self.positions_end.get(agent.name, agent.position_current)
+            #     agent.step(self.activity, agent_position_end)
+            #     self.draw_agent(agent.position_current)
+            #     self.draw_textbox(agent.position_current, text="", action=agent.action)
 
             self.draw_step_info()
             pygame.display.flip()
             self.clock.tick(600)
-            self.step_counter += 1
         pygame.quit()
 
     def vrienden_maken(self):
@@ -226,9 +229,6 @@ class Env:
         if text_surface:
             self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
 
-    import random
-    from collections import defaultdict
-
     def get_positions_end(self):
         activity_names = defaultdict(list)
         for agent in self.agents:
@@ -262,7 +262,10 @@ class Env:
         """Draws step information including time progression."""
         date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
         font = pygame.font.Font(None, 36)
-        step_text = f"{self.step_counter % 2000}"
+
+        # Calculate the current step in the day
+        step_in_day = self.step_current
+        step_text = f"Step: {step_in_day}"
         week_text = f"Date: {date_format}"
 
         step_surface = font.render(step_text, True, (255, 255, 255))
@@ -446,8 +449,23 @@ class Env:
                 agent_counter += 1
         return agents
 
-    def __repr__(self):
-        return f"{self.step_counter}, '{self.activity}'"
+    def set_time(self):
+        self.step_current = self.step % self.steps_per_day  # Calculate first
+        days_elapsed = self.step // self.steps_per_day
+        self.date_current = self.start_date + timedelta(days=days_elapsed)
+        self.step += 1  # Increment after calculations
+
+    def check_breakpoint(self):
+        if self.breakpoint_time and self.date_current >= self.breakpoint_time:
+            print(self)  # Trigger __str__ method if breakpoint is reached
+
+    # def __repr__(self):
+        # return f"{self.step_counter}, '{self.activity}'"
 
     def __str__(self):
-        return f"{self.step_counter}, {self.activity}"
+        # Ensure the epoch only updates when a full epoch is completed
+        current_epoch = (self.step - 1) // self.steps_per_epoch
+        date_str = self.date_current.strftime("%Y-%m-%d")
+        return f"{date_str} | step current: {self.step_current} | step: {self.step} | epoch:{current_epoch}"
+
+
