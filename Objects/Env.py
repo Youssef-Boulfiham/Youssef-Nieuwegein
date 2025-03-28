@@ -17,6 +17,7 @@ class Env:
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
+        self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
         self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
         # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
@@ -99,34 +100,34 @@ class Env:
             self.draw_background()
             ##
             self.activity = "idle"
-            # if self.step_current == 0:
-            #     self.action = True
-            #     self.activity = "activiteit_kiezen"
-            # elif self.step_current == 1000:
-            #     self.action = False
-            #     self.activity = "vrienden_maken"
-            #     self.positions_end = self.get_positions_end()
-            # elif self.step_current == 1250:
-            #     self.vrienden_maken()
-            #     self.action = True
-            # elif self.step_current == 1450:
-            #     self.action = False
-            #     self.set_agents_actions_false()
-            # elif self.step_current == 1500:
-            #     self.activity = "middelen_gebruiken"
-            #     self.middelen_gebruiken()
-            # elif self.step_current == 1750:
-            #     self.action = True
-            # elif self.step_current == 1950:
-            #     self.action = False
-            # #
-            # for agent in self.agents:
-            #     agent_position_end = None
-            #     if self.activity == "vrienden_maken":
-            #         agent_position_end = self.positions_end.get(agent.name, agent.position_current)
-            #     agent.step(self.activity, agent_position_end)
-            #     self.draw_agent(agent.position_current)
-            #     self.draw_textbox(agent.position_current, text="", action=agent.action)
+            if self.step_current == 0:
+                self.action = True
+                self.activity = "activiteit_kiezen"
+            elif self.step_current == 1000:
+                self.action = False
+                self.activity = "vrienden_maken"
+                self.positions_end = self.get_positions_end()
+            elif self.step_current == 1250:
+                self.vrienden_maken()
+                self.action = True
+            elif self.step_current == 1450:
+                self.action = False
+                self.set_agents_actions_false()
+            elif self.step_current == 1500:
+                self.activity = "middelen_gebruiken"
+                self.middelen_gebruiken()
+            elif self.step_current == 1750:
+                self.action = True
+            elif self.step_current == 1950:
+                self.action = False
+            #
+            for agent in self.agents:
+                agent_position_end = None
+                if self.activity == "vrienden_maken":
+                    agent_position_end = self.positions_end.get(agent.name, agent.position_current)
+                agent.step(self.activity, agent_position_end)
+                self.draw_agent(agent.position_current)
+                self.draw_textbox(agent.position_current, text="", action=agent.action)
 
             self.draw_step_info()
             pygame.display.flip()
@@ -423,7 +424,7 @@ class Env:
             try:
                 with open(file_path, "r") as f:
                     # Read the file and process each line as a tuple
-                    positions = [tuple(map(int, line.strip().strip('()').split(','))) for line in f.readlines()]
+                    positions = [tuple(map(int, line.strip().strip('(),').split(','))) for line in f.readlines()]
                     all_positions[activity] = positions
             except FileNotFoundError:
                 print(f"\033[93mposities-activiteit-{activity} nog niet geschreven\033[0m")
