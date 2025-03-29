@@ -17,9 +17,11 @@ class Env:
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
-        self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
-        self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
+        # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
+        # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
+        # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
+        # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
@@ -34,8 +36,8 @@ class Env:
         }
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.set_collision()
-        # self.set_positions()
-        # self.set_positions_friends()
+        self.set_positions()
+        self.set_positions_friends()
         self.positions_color = self.get_positions()
         self.positions_friends = self.get_positions_friends()
         self.agents_count = sum(self.age_counts.values())
@@ -105,19 +107,19 @@ class Env:
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 1000:
                 self.action = False
-                self.activity = "vrienden_maken"
-                self.positions_end = self.get_positions_end()
-            elif self.step_current == 1250:
-                self.vrienden_maken()
-                self.action = True
-            elif self.step_current == 1450:
-                self.action = False
-                self.set_agents_actions_false()
-            elif self.step_current == 1500:
-                self.activity = "middelen_gebruiken"
-                self.middelen_gebruiken()
-            elif self.step_current == 1750:
-                self.action = True
+                # self.activity = "vrienden_maken"
+                # self.positions_end = self.get_positions_end()
+            # elif self.step_current == 1250:
+            #     self.vrienden_maken()
+            #     self.action = True
+            # elif self.step_current == 1450:
+            #     self.action = False
+            #     self.set_agents_actions_false()
+            # elif self.step_current == 1500:
+            #     self.activity = "middelen_gebruiken"
+            #     self.middelen_gebruiken()
+            # elif self.step_current == 1750:
+            #     self.action = True
             elif self.step_current == 1950:
                 self.action = False
             #
@@ -242,7 +244,6 @@ class Env:
         for activity, agents in activity_names.items():
             positions_friends_activity = self.positions_friends[activity]
             random.shuffle(agents)
-
             # Ensure even count by removing the last agent if odd
             if len(agents) % 2 != 0:
                 agents.pop()
@@ -451,7 +452,7 @@ class Env:
         return agents
 
     def set_time(self):
-        self.step_current = self.step % self.steps_per_day  # Calculate first
+        self.step_current = self.step % self.steps_per_day
         days_elapsed = self.step // self.steps_per_day
         self.date_current = self.start_date + timedelta(days=days_elapsed)
         self.step += 1  # Increment after calculations

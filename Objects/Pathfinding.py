@@ -40,8 +40,8 @@ class AStar:
                     g_score[neighbor_tuple] = tentative_g_score
                     f_score[neighbor_tuple] = tentative_g_score + self.heuristic(neighbor, end)
                     heapq.heappush(open_set, (f_score[neighbor_tuple], neighbor_tuple))
-        print("No path", collors_allowed, start, end)
-        return [list(start)]
+        print(f"No path: {collors_allowed}, {start}, {end}")
+        return [tuple(start)]
 
     @staticmethod
     def heuristic(a, b):

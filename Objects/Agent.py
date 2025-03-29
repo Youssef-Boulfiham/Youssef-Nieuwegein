@@ -1,3 +1,4 @@
+import itertools
 import os
 import numpy as np
 from collections import defaultdict
@@ -17,14 +18,23 @@ class Agent:
         # self.agents_count = agents_count
         self.root = root
         self.Pathfinding = AStar()
-        self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
-                               "thuis vrije tijd": [(575, 400)],
-                               "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)],
-                               "school vrije tijd": [(575, 400)],
-                               "vriend thuis thuis": [(304, 80), (224, 175)],
-                               "vriend thuis school": [(335, 400), (255, 300)], "vriend thuis vrije tijd": [(575, 400)],
-                               "vrije tijd thuis": [(304, 80)], "vrije tijd school": [(335, 400)],
-                               "vrije tijd vriend thuis": [(464, 255)]}
+        self.activity_nodes = {"thuis school": [(382, 162), (392, 172), (400, 190), (402, 202), (416, 224)],
+                               "thuis vriend thuis": [(140, 200), (152, 192), (166, 190), (182, 192), (200, 200),
+                                                      (212, 172), (232, 156), (236, 158), (224, 172),
+                                                      (204, 182), (196, 192)],
+                               "thuis vrije tijd": [(516, 402), (512, 420), (496, 438)],
+                               "school thuis": [(310, 320), (302, 300), (300, 300), (292, 286), (286, 276)],
+                               "school vriend thuis": [(266, 152), (272, 136), (276, 132), (280, 124), (266, 116),
+                                                       (292, 112), (196, 102), (236, 158)],
+                               "school vrije tijd": [(612, 332), (604, 336), (602, 342), (596, 356)],
+                               "vriend thuis thuis": [(126, 272), (132, 280), (136, 288)],
+                               "vriend thuis school": [(400, 104), (400, 112), (392, 124), (390, 132),
+                                                       (385, 148), (375, 162)],
+                               "vriend thuis vrije tijd": [(516, 402), (512, 420), (496, 438)],
+                               "vrije tijd thuis": [(342, 392), (334, 400), (328, 412)],
+                               "vrije tijd school": [(382, 162), (392, 172), (400, 190), (402, 202), (416, 224)],
+                               "vrije tijd vriend thuis": [(266, 152), (272, 136), (276, 132), (280, 124), (266, 116),
+                                                       (292, 112), (196, 102)]}
         self.activities_colors = {"thuis": "red",
                                   "school": "green",
                                   "vrije tijd": "blue",
@@ -34,34 +44,28 @@ class Agent:
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.age = age
+
+        self.position_current, self.activity = self.set_state()
         self.action = None
-        self.activity = random.choice(["school", "vrije tijd"])
-        self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
+        # self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
         self.path = []
         self.friends = []
         self.friend_request = self.friend_request = {i: 0 for i in range(agents_count)}
-        self.neighbour = None
-        self.a = []
 
     def step(self, activity, position_end):
-        # Initialize colors_allowed to None (position_end is passed as an input)
         colors_allowed = None
 
-        # Handle different activities
         if activity == "vrienden_maken" and self.activity != "thuis":
-            # Use the input parameter position_end directly for vrienden_maken
             self.vrienden_maken(position_end)
         elif activity in ["activiteit_kiezen"]:
             position_end, colors_allowed = self.activiteit_kiezen()
-        elif len(self.path) == 0:  # idle
-            result = self.idle()  # Get the result from idle
-            if result:  # Only define position_end and colors_allowed if idle() returns something
+        elif len(self.path) == 0:
+            result = self.idle()
+            if result:
                 position_end, colors_allowed = result
             else:
-                # Fallback: Use current position and color
                 position_end, colors_allowed = self.position_current, [self.activities_colors[self.activity]]
 
-        # Make sure position_end and colors_allowed are defined before using them
         if position_end is not None and colors_allowed is not None:
             self.path += self.Pathfinding.search_path(start=self.position_current,
                                                       end=position_end,
@@ -149,6 +153,16 @@ class Agent:
                 print(f"\033[93mposities-activiteit-{activity} nog niet berekend\033[0m")
                 all_positions[activity] = []
         return all_positions
+
+    def set_state(self):
+        activity = random.choice(list(self.activities_colors.keys()))
+        file_name = self.activities_colors[activity]
+        file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{file_name}.txt")
+        with open(file_path, "r") as file:
+            positions = [eval(line.strip()) for line in file.readlines() if line.strip()]
+        if positions and isinstance(positions[0], list):
+            positions = list(itertools.chain.from_iterable(positions))
+        return tuple(random.choice(positions))[::-1], activity
 
     def __repr__(self):
         return (f"'{self.name}', {self.age}, {len(self.friends)}, "
