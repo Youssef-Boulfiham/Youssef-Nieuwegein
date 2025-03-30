@@ -17,11 +17,11 @@ class Env:
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
-        # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
+        self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
         # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
         # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
+        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
@@ -79,8 +79,7 @@ class Env:
         self.date_current = start_date
         self.breakpoint_time = breakpoint_time  # Time to trigger breakpoint
         while True:
-            print(self)
-            self.set_time()
+
             # self.check_breakpoint()  # Check if we are at the breakpoint
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -109,17 +108,17 @@ class Env:
                 self.action = False
                 # self.activity = "vrienden_maken"
                 # self.positions_end = self.get_positions_end()
-            # elif self.step_current == 1250:
-            #     self.vrienden_maken()
-            #     self.action = True
-            # elif self.step_current == 1450:
-            #     self.action = False
-            #     self.set_agents_actions_false()
-            # elif self.step_current == 1500:
-            #     self.activity = "middelen_gebruiken"
-            #     self.middelen_gebruiken()
-            # elif self.step_current == 1750:
-            #     self.action = True
+            elif self.step_current == 1250:
+                self.vrienden_maken()
+                self.action = True
+            elif self.step_current == 1450:
+                self.action = False
+                self.set_agents_actions_false()
+            elif self.step_current == 1500:
+                self.activity = "middelen_gebruiken"
+                self.middelen_gebruiken()
+            elif self.step_current == 1750:
+                self.action = True
             elif self.step_current == 1950:
                 self.action = False
             #
@@ -130,8 +129,10 @@ class Env:
                 agent.step(self.activity, agent_position_end)
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, text="", action=agent.action)
-
             self.draw_step_info()
+            print(self)
+            self.set_time()
+            #
             pygame.display.flip()
             self.clock.tick(600)
         pygame.quit()
@@ -452,10 +453,10 @@ class Env:
         return agents
 
     def set_time(self):
-        self.step_current = self.step % self.steps_per_day
-        days_elapsed = self.step // self.steps_per_day
-        self.date_current = self.start_date + timedelta(days=days_elapsed)
-        self.step += 1  # Increment after calculations
+        self.step += 1
+        self.step_current = self.step % self.steps_per_day  # Compute current step first
+        days_elapsed = self.step // self.steps_per_day  # Compute elapsed days
+        self.date_current = self.start_date + timedelta(days=days_elapsed)  # Update date
 
     def check_breakpoint(self):
         if self.breakpoint_time and self.date_current >= self.breakpoint_time:
