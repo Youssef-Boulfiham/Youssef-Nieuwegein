@@ -31,12 +31,12 @@ class Env:
         self.colors = {
             "black": (0, 0, 0),
             "white": (255, 255, 255),
-            "red": (255, 0, 0),
-            "green": (0, 255, 0),
-            "blue": (0, 0, 255),
+            "thuis": (255, 0, 0),
+            "school": (0, 255, 0),
+            "vrije tijd": (0, 0, 255),
             "grey": (128, 128, 128),
             "brown": (143, 110, 26),
-            "red dark": (155, 0, 0)
+            "vriend thuis": (155, 0, 0)
         }
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.set_collision()
@@ -219,8 +219,9 @@ class Env:
     from collections import defaultdict
 
     def set_positions(self):
-        for color in self.colors_activities:
-            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
+        positions_color_sorted = {}
+        for activity in self.colors_activities:
+            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{activity}'].txt", dtype=int)
             # filter (x%32=0, y%16=0)
             positions = [(x, y)
                                for x in range(layer_collision.shape[1])
@@ -237,57 +238,24 @@ class Env:
                     positions_filtered.append(y_groups[y].pop(0))
                     positions_filtered.append(y_groups[y].pop(0))
             positions_filtered.sort(key=lambda pos: (pos[1], pos[0]))
+            # positions_color_sorted[]
             print(positions_filtered)
             self.positions_filtered = positions_filtered
-            self.plot_positions(next(k for k, v in self.activity_colors.items() if v == color))
-            with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
+            self.plot_positions(next(k for k, v in self.activity_colors.items() if v == activity))
+            with open(self.root + f"/Data/Input/coordinates/{activity}.txt", "w") as file:
                 json.dump(positions_filtered, file)
 
-    def plot_positions(self, activity):
-        """Plots the filtered positions on a 500x700 grid with only numbered labels (no scatter points)."""
-        if not self.positions_filtered:
-            print("No positions to plot. Run set_positions() first.")
-            return
-
-        fig, ax = plt.subplots(figsize=(5, 7))  # 500x700 scale in inches (assuming 100 dpi per inch)
-
-        # Add only numbers at each position
-        for i, (x, y) in enumerate(self.positions_filtered):
-            ax.text(x, y, str(i + 1), fontsize=8, ha='center', va='center', color='black')
-
-        # Formatting
-        ax.set_xlim(0, 500)
-        ax.set_ylim(700, 0)  # Inverting y-axis to match grid convention (top-left origin)
-        ax.set_xlabel("X Position")
-        ax.set_ylabel("Y Position")
-        ax.set_title("Filtered Positions on 500x700 Map (Numbers Only)")
-        ax.grid(True)
-        save_path = f"/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/{activity}.png"
-        plt.savefig(save_path, dpi=100, bbox_inches="tight")
-        plt.close()
-        # Show plot
-        # plt.show()
 
     def get_positions_end(self):
-        """
-        Assigns agents to valid end positions using pre-filtered positions.
-
-        Returns:
-            dict: Mapping of agent names to their assigned (x, y) positions.
-        """
-        # Step 1: Sort agents by activity
+        # sorteer agents per activiteit
         activities_agents = {"vrije tijd": [], "school": [], "vriend thuis": []}
         for agent in self.agents:
             if agent.activity in activities_agents:
                 activities_agents[agent.activity].append(agent.name)
 
-        # Step 2: Define color mapping for activities
-        activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
         agents_positions_end = {}
-
-        # Step 3: Assign positions per activity
         for activity, agent_names in activities_agents.items():
-            color = activity_colors[activity]
+            color = self.activity_colors[activity]
             valid_positions = self.positions_color_sorted[color]  # Already filtered by `set_positions`
 
             # Step 4: Assign agents to positions and print pairs per row
@@ -428,25 +396,21 @@ class Env:
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
     def set_collision(self):
-        colors_possible = [['red'], ['green'], ['blue'], ['red dark'],
-                           ['red', 'black', 'red'],
-                           ['red', 'black', 'green'],
-                           ['red', 'black', 'blue'],
-                           ['red', 'black', 'red dark'],
-                           ['green', 'black', 'red'],
-                           ['green', 'black', 'green'],
-                           ['green', 'black', 'blue'],
-                           ['green', 'black', 'red dark'],
-                           ['blue', 'black', 'red'],
-                           ['blue', 'black', 'green'],
-                           ['blue', 'black', 'blue'],
-                           ['blue', 'black', 'red dark'],
-                           ['red dark', 'black', 'red'],
-                           ['red dark', 'black', 'green'],
-                           ['red dark', 'black', 'blue'],
-                           ['red dark', 'black', 'red dark']]
-
-        for i in colors_possible:
+        """voor pathfinding"""
+        colors_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
+                           ['thuis', 'black', 'school'],
+                           ['thuis', 'black', 'vrije tijd'],
+                           ['thuis', 'black', 'vriend thuis'],
+                           ['school', 'black', 'thuis'],
+                           ['school', 'black', 'vrije tijd'],
+                           ['school', 'black', 'vriend thuis'],
+                           ['vrije tijd', 'black', 'thuis'],
+                           ['vrije tijd', 'black', 'school'],
+                           ['vrije tijd', 'black', 'vriend thuis'],
+                           ['vriend thuis', 'black', 'thuis'],
+                           ['vriend thuis', 'black', 'school'],
+                           ['vriend thuis', 'black', 'vrije tijd']]
+        for i in colors_combinations:
             colors_rgb = [self.colors[color] for color in i]
             image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
             width, height = image.size
@@ -544,3 +508,27 @@ class Env:
         current_epoch = (self.step - 1) // self.steps_per_epoch
         date_str = self.date_current.strftime("%Y-%m-%d")
         return f"{date_str} | step current: {self.step_current} | step: {self.step} | epoch:{current_epoch}"
+    def plot_positions(self, activity):
+        """Plots the filtered positions on a 500x700 grid with only numbered labels (no scatter points)."""
+        if not self.positions_filtered:
+            print("No positions to plot. Run set_positions() first.")
+            return
+
+        fig, ax = plt.subplots(figsize=(5, 7))  # 500x700 scale in inches (assuming 100 dpi per inch)
+
+        # Add only numbers at each position
+        for i, (x, y) in enumerate(self.positions_filtered):
+            ax.text(x, y, str(i + 1), fontsize=8, ha='center', va='center', color='black')
+
+        # Formatting
+        ax.set_xlim(0, 500)
+        ax.set_ylim(700, 0)  # Inverting y-axis to match grid convention (top-left origin)
+        ax.set_xlabel("X Position")
+        ax.set_ylabel("Y Position")
+        ax.set_title("Filtered Positions on 500x700 Map (Numbers Only)")
+        ax.grid(True)
+        save_path = f"/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/{activity}.png"
+        plt.savefig(save_path, dpi=100, bbox_inches="tight")
+        plt.close()
+        # Show plot
+        # plt.show()
