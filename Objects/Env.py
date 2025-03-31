@@ -222,31 +222,24 @@ class Env:
         for color in self.colors_activities:
             layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
             # filter (x%32=0, y%16=0)
-            positions_valid = [(x, y)
+            positions = [(x, y)
                                for x in range(layer_collision.shape[1])
                                for y in range(layer_collision.shape[0])
                                if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
-            # filter even op de x-as
-            y_groups = defaultdict(list)
-            for x, y in positions_valid:
-                y_groups[y].append((x, y))  # Group by y-coordinate
-
+            # filter x-as op even
             positions_filtered = []
-            for y in sorted(y_groups.keys()):  # Process row by row
-                y_groups[y].sort()  # Ensure left-to-right order
-
-                # Ensure pairs are formed **horizontally** by taking two at a time
+            y_groups = defaultdict(list)
+            for x, y in positions:
+                y_groups[y].append((x, y))
+            for y in y_groups.keys():
+                y_groups[y].sort()
                 while len(y_groups[y]) >= 2:
-                    positions_filtered.append(y_groups[y].pop(0))  # Take the leftmost
-                    positions_filtered.append(y_groups[y].pop(0))  # Take the next one on the right
-
-            # Step 3: Sort positions **left to right, row by row**
+                    positions_filtered.append(y_groups[y].pop(0))
+                    positions_filtered.append(y_groups[y].pop(0))
             positions_filtered.sort(key=lambda pos: (pos[1], pos[0]))
-
-            # Store for plotting
+            print(positions_filtered)
             self.positions_filtered = positions_filtered
             self.plot_positions(next(k for k, v in self.activity_colors.items() if v == color))
-            # Step 4: Write filtered positions to file
             with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
                 json.dump(positions_filtered, file)
 
