@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import random
 import os
@@ -14,6 +15,9 @@ from datetime import datetime, timedelta
 
 class Env:
     def __init__(self, start_date, epochs, steps_per_day=4000, breakpoint_time=None):
+        self.positions_filtered = []
+        self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
+        self.colors_activities = ["red", "green", "blue", "red dark"]
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
@@ -37,7 +41,7 @@ class Env:
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
         self.set_collision()
         self.set_positions()
-        self.set_positions_friends()
+        # self.set_positions_friends()
         self.positions_color = self.get_positions()
         self.positions_color_sorted = {key: sorted(value) for key, value in self.positions_color.items()}
         self.positions_friends = self.positions_color_sorted
@@ -139,7 +143,7 @@ class Env:
                     agent_position_end = self.positions_end.get(agent.name, agent.position_current)
                 agent.step(self.activity, agent_position_end)
                 self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, text=f"", action=agent.action)#{agent.name, len(agent.friends)}
+                self.draw_textbox(agent.position_current, text=f"{agent.name, len(agent.friends)}", action=agent.action)
             self.draw_step_info()
             # print(self)
             self.set_time()
@@ -147,9 +151,6 @@ class Env:
             pygame.display.flip()
             self.clock.tick(60)
         pygame.quit()
-
-
-
 
     def middelen_gebruiken(self):
         """TEST DIT IN NOTEBOOK"""
@@ -215,36 +216,64 @@ class Env:
 
     from collections import defaultdict
 
+    from collections import defaultdict
+
     def set_positions(self):
-        """
-        Processes collision layers and stores valid positions, ensuring each unique x-coordinate
-        has an even number of positions for proper agent pairing.
-        """
-        for color in ["red", "green", "blue", "red dark"]:
+        for color in self.colors_activities:
             layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
-
-            # Step 1: Collect all valid grid-aligned positions (x%32=0, y%16=0)
-            positions_valid = [
-                (x, y)
-                for y in range(layer_collision.shape[0])
-                for x in range(layer_collision.shape[1])
-                if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0
-            ]
-
-            # Step 2: Ensure each x-coordinate has an even number of positions
-            x_groups = defaultdict(list)
+            # filter (x%32=0, y%16=0)
+            positions_valid = [(x, y)
+                               for x in range(layer_collision.shape[1])
+                               for y in range(layer_collision.shape[0])
+                               if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
+            # filter even op de x-as
+            y_groups = defaultdict(list)
             for x, y in positions_valid:
-                x_groups[x].append((x, y))
+                y_groups[y].append((x, y))  # Group by y-coordinate
 
             positions_filtered = []
-            for x in sorted(x_groups.keys()):  # Sort x-values for structured placement
-                if len(x_groups[x]) % 2 != 0:
-                    x_groups[x].pop()  # Remove last entry if odd
-                positions_filtered.extend(x_groups[x])  # Add the even positions
+            for y in sorted(y_groups.keys()):  # Process row by row
+                y_groups[y].sort()  # Ensure left-to-right order
 
-            # Step 3: Write filtered positions to file
+                # Ensure pairs are formed **horizontally** by taking two at a time
+                while len(y_groups[y]) >= 2:
+                    positions_filtered.append(y_groups[y].pop(0))  # Take the leftmost
+                    positions_filtered.append(y_groups[y].pop(0))  # Take the next one on the right
+
+            # Step 3: Sort positions **left to right, row by row**
+            positions_filtered.sort(key=lambda pos: (pos[1], pos[0]))
+
+            # Store for plotting
+            self.positions_filtered = positions_filtered
+            self.plot_positions(next(k for k, v in self.activity_colors.items() if v == color))
+            # Step 4: Write filtered positions to file
             with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
-                json.dump(sorted(positions_filtered), file)
+                json.dump(positions_filtered, file)
+
+    def plot_positions(self, activity):
+        """Plots the filtered positions on a 500x700 grid with only numbered labels (no scatter points)."""
+        if not self.positions_filtered:
+            print("No positions to plot. Run set_positions() first.")
+            return
+
+        fig, ax = plt.subplots(figsize=(5, 7))  # 500x700 scale in inches (assuming 100 dpi per inch)
+
+        # Add only numbers at each position
+        for i, (x, y) in enumerate(self.positions_filtered):
+            ax.text(x, y, str(i + 1), fontsize=8, ha='center', va='center', color='black')
+
+        # Formatting
+        ax.set_xlim(0, 500)
+        ax.set_ylim(700, 0)  # Inverting y-axis to match grid convention (top-left origin)
+        ax.set_xlabel("X Position")
+        ax.set_ylabel("Y Position")
+        ax.set_title("Filtered Positions on 500x700 Map (Numbers Only)")
+        ax.grid(True)
+        save_path = f"/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/{activity}.png"
+        plt.savefig(save_path, dpi=100, bbox_inches="tight")
+        plt.close()
+        # Show plot
+        # plt.show()
 
     def get_positions_end(self):
         """
@@ -270,7 +299,8 @@ class Env:
 
             # Step 4: Assign agents to positions and print pairs per row
             for agent_name, position in zip(agent_names, valid_positions):
-                current_position = self.agents[agent_name].position_current  # Assuming this method gets current position
+                current_position = self.agents[
+                    agent_name].position_current  # Assuming this method gets current position
                 agents_positions_end[agent_name] = tuple(position)[::-1]
 
                 # Print agent info with current position, end position, name, and activity
@@ -280,17 +310,15 @@ class Env:
         return agents_positions_end
 
     def vrienden_maken(self):
-        # agent object + agent.huidige positie
-        agents = list(self.positions_end.keys())
+        agents = sorted(self.positions_end.keys(), key=lambda name: self.positions_end[name])  # Ensure correct order
 
-        pairwise = lambda it: zip(*[iter(it)] * 2)  # verkeerd
+        pairwise = lambda it: zip(it[::2], it[1::2])  # Guarantees adjacent pairing
         friendship_status = {}
 
         for agent_left_name, agent_right_name in pairwise(agents):
             agent_left = self.agents[agent_left_name]
             agent_right = self.agents[agent_right_name]
 
-            # Enforce strict friendship limits
             if agent_left.friend_request.get(agent_right_name, 0) < 5 and \
                     agent_right_name not in agent_left.friends and \
                     len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
@@ -302,10 +330,20 @@ class Env:
                 agent_left.action, agent_right.action = "checkmark", "checkmark"
                 friendship_status[agent_left_name] = True
                 friendship_status[agent_right_name] = True
-                # print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
+
+                print(f"{agent_left_name} and {agent_right_name} became friends!")
+
             else:
                 friendship_status[agent_left_name] = False
                 friendship_status[agent_right_name] = False
+
+        # Handle an unpaired agent (if odd number of agents)
+        if len(agents) % 2 == 1:
+            last_agent = self.agents[agents[-1]]
+            friendship_status[agents[-1]] = False
+            print(f"{agents[-1]} has no pair and made no new friends.")
+
+        return friendship_status
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
@@ -427,8 +465,6 @@ class Env:
                         collision_layer[y, x] = 1
             np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
 
-
-
     def get_positions(self):
         """Load all valid coordinates per activity."""
         positions_color = {}
@@ -508,12 +544,10 @@ class Env:
             print(self)  # Trigger __str__ method if breakpoint is reached
 
     # def __repr__(self):
-        # return f"{self.step_counter}, '{self.activity}'"
+    # return f"{self.step_counter}, '{self.activity}'"
 
     def __str__(self):
         # Ensure the epoch only updates when a full epoch is completed
         current_epoch = (self.step - 1) // self.steps_per_epoch
         date_str = self.date_current.strftime("%Y-%m-%d")
         return f"{date_str} | step current: {self.step_current} | step: {self.step} | epoch:{current_epoch}"
-
-
