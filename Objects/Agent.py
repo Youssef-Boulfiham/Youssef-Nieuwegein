@@ -170,4 +170,4 @@ class Agent:
 
     def __str__(self):
         return str(
-            f"{self.name}, {self.age}, {len(self.friends)}, {self.position_current}, {len(self.path)}, {self.activity}, {self.action}")
+            f"{self.name}, {self.age}, {len(self.friends)}, {self.position_current}, p={len(self.path)}, {self.activity}, {self.action}")

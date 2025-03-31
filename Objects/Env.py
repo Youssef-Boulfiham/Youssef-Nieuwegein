@@ -1,3 +1,4 @@
+from collections import Counter, defaultdict
 import random
 import os
 import numpy as np
@@ -7,7 +8,6 @@ from PIL import Image
 from Objects.Agent import Agent
 import ast
 import json
-from collections import defaultdict
 from itertools import tee
 from datetime import datetime, timedelta
 
@@ -17,12 +17,12 @@ class Env:
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
-        self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
+        # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
         # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
-        # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
         # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
-        self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        # self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -39,7 +39,8 @@ class Env:
         self.set_positions()
         self.set_positions_friends()
         self.positions_color = self.get_positions()
-        self.positions_friends = self.get_positions_friends()
+        self.positions_color_sorted = {key: sorted(value) for key, value in self.positions_color.items()}
+        self.positions_friends = self.positions_color_sorted
         self.agents_count = sum(self.age_counts.values())
         # self.agents = [Agent(positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
         self.agents = self.get_agents()
@@ -72,8 +73,8 @@ class Env:
         self.steps_per_day = steps_per_day
         self.steps_per_week = self.steps_per_day * 7
         self.steps_per_epoch = self.steps_per_week * 4
-        self.step = 0
-        self.step_current = 0
+        self.step = 950
+        self.step_current = 950
         # time
         self.start_date = start_date
         self.date_current = start_date
@@ -102,25 +103,35 @@ class Env:
             ##
             self.activity = "idle"
             if self.step_current == 0:
-                self.action = True
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 1000:
-                self.action = False
-                # self.activity = "vrienden_maken"
-                # self.positions_end = self.get_positions_end()
+                self.activity = "vrienden_maken"
+                self.positions_end = self.get_positions_end()
             elif self.step_current == 1250:
                 self.vrienden_maken()
                 self.action = True
-            elif self.step_current == 1450:
-                self.action = False
-                self.set_agents_actions_false()
             elif self.step_current == 1500:
-                self.activity = "middelen_gebruiken"
-                self.middelen_gebruiken()
-            elif self.step_current == 1750:
-                self.action = True
-            elif self.step_current == 1950:
+                self.set_agents_actions_false()
                 self.action = False
+                self.activity = "middelen_gebruiken"
+                # self.middelen_gebruiken()
+            elif self.step_current == 1750:
+                pass
+            elif self.step_current == 1950:
+                pass
+            elif self.step_current == 2000:
+                self.activity = "activiteit_kiezen"
+            elif self.step_current == 3000:
+                self.activity = "vrienden_maken"
+                self.positions_end = self.get_positions_end()
+            elif self.step_current == 3250:
+                self.vrienden_maken()
+                self.action = True
+            elif self.step_current == 3500:
+                self.set_agents_actions_false()
+                self.action = False
+                self.activity = "middelen_gebruiken"
+            #
             #
             for agent in self.agents:
                 agent_position_end = None
@@ -128,48 +139,17 @@ class Env:
                     agent_position_end = self.positions_end.get(agent.name, agent.position_current)
                 agent.step(self.activity, agent_position_end)
                 self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, text="", action=agent.action)
+                self.draw_textbox(agent.position_current, text=f"", action=agent.action)#{agent.name, len(agent.friends)}
             self.draw_step_info()
-            print(self)
+            # print(self)
             self.set_time()
             #
             pygame.display.flip()
-            self.clock.tick(600)
+            self.clock.tick(60)
         pygame.quit()
 
-    def vrienden_maken(self):
-        agents = list(self.positions_end.keys())
 
-        # Ensure an even number of agents
-        # if len(agents) % 2 != 0:
-        #     print("Uneven number of agents, skipping pairing for one agent.")
-            # agents = agents[:-1]
 
-        pairwise = lambda it: zip(*[iter(it)] * 2)  # verkeerd
-        friendship_status = {}
-
-        for agent_left_name, agent_right_name in pairwise(agents):
-            agent_left = self.agents[agent_left_name]
-            agent_right = self.agents[agent_right_name]
-
-            # Enforce strict friendship limits
-            if agent_left.friend_request.get(agent_right_name, 0) < 5 and \
-                    agent_right_name not in agent_left.friends and \
-                    len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
-                    random.getrandbits(1):
-
-                agent_left.friends.append(agent_right_name)
-                agent_right.friends.append(agent_left_name)
-
-                agent_left.action, agent_right.action = "checkmark", "checkmark"
-                friendship_status[agent_left_name] = True
-                friendship_status[agent_right_name] = True
-                # print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
-            else:
-                friendship_status[agent_left_name] = False
-                friendship_status[agent_right_name] = False
-
-        # print(friendship_status)
 
     def middelen_gebruiken(self):
         """TEST DIT IN NOTEBOOK"""
@@ -233,27 +213,99 @@ class Env:
         if text_surface:
             self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
 
+    from collections import defaultdict
+
+    def set_positions(self):
+        """
+        Processes collision layers and stores valid positions, ensuring each unique x-coordinate
+        has an even number of positions for proper agent pairing.
+        """
+        for color in ["red", "green", "blue", "red dark"]:
+            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
+
+            # Step 1: Collect all valid grid-aligned positions (x%32=0, y%16=0)
+            positions_valid = [
+                (x, y)
+                for y in range(layer_collision.shape[0])
+                for x in range(layer_collision.shape[1])
+                if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0
+            ]
+
+            # Step 2: Ensure each x-coordinate has an even number of positions
+            x_groups = defaultdict(list)
+            for x, y in positions_valid:
+                x_groups[x].append((x, y))
+
+            positions_filtered = []
+            for x in sorted(x_groups.keys()):  # Sort x-values for structured placement
+                if len(x_groups[x]) % 2 != 0:
+                    x_groups[x].pop()  # Remove last entry if odd
+                positions_filtered.extend(x_groups[x])  # Add the even positions
+
+            # Step 3: Write filtered positions to file
+            with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
+                json.dump(sorted(positions_filtered), file)
+
     def get_positions_end(self):
-        activity_names = defaultdict(list)
+        """
+        Assigns agents to valid end positions using pre-filtered positions.
+
+        Returns:
+            dict: Mapping of agent names to their assigned (x, y) positions.
+        """
+        # Step 1: Sort agents by activity
+        activities_agents = {"vrije tijd": [], "school": [], "vriend thuis": []}
         for agent in self.agents:
-            activity = agent.activity
-            if activity != "thuis":
-                activity_names[activity].append(agent.name)
+            if agent.activity in activities_agents:
+                activities_agents[agent.activity].append(agent.name)
 
-        agents_positions = {}
+        # Step 2: Define color mapping for activities
+        activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
+        agents_positions_end = {}
 
-        for activity, agents in activity_names.items():
-            positions_friends_activity = self.positions_friends[activity]
-            random.shuffle(agents)
-            # Ensure even count by removing the last agent if odd
-            if len(agents) % 2 != 0:
-                agents.pop()
+        # Step 3: Assign positions per activity
+        for activity, agent_names in activities_agents.items():
+            color = activity_colors[activity]
+            valid_positions = self.positions_color_sorted[color]  # Already filtered by `set_positions`
 
-            # Assign positions in pairs
-            for i, agent in enumerate(agents):
-                agents_positions[agent] = positions_friends_activity[i]
+            # Step 4: Assign agents to positions and print pairs per row
+            for agent_name, position in zip(agent_names, valid_positions):
+                current_position = self.agents[agent_name].position_current  # Assuming this method gets current position
+                agents_positions_end[agent_name] = tuple(position)[::-1]
 
-        return agents_positions
+                # Print agent info with current position, end position, name, and activity
+                print(
+                    f"Agent: {agent_name} | Activity: {activity} | Current Position: {current_position} | End Position: {position}")
+
+        return agents_positions_end
+
+    def vrienden_maken(self):
+        # agent object + agent.huidige positie
+        agents = list(self.positions_end.keys())
+
+        pairwise = lambda it: zip(*[iter(it)] * 2)  # verkeerd
+        friendship_status = {}
+
+        for agent_left_name, agent_right_name in pairwise(agents):
+            agent_left = self.agents[agent_left_name]
+            agent_right = self.agents[agent_right_name]
+
+            # Enforce strict friendship limits
+            if agent_left.friend_request.get(agent_right_name, 0) < 5 and \
+                    agent_right_name not in agent_left.friends and \
+                    len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
+                    random.getrandbits(1):
+
+                agent_left.friends.append(agent_right_name)
+                agent_right.friends.append(agent_left_name)
+
+                agent_left.action, agent_right.action = "checkmark", "checkmark"
+                friendship_status[agent_left_name] = True
+                friendship_status[agent_right_name] = True
+                # print(agent_left.activity, agent_right.activity, agent_left_name, agent_right_name)
+            else:
+                friendship_status[agent_left_name] = False
+                friendship_status[agent_right_name] = False
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
@@ -375,14 +427,7 @@ class Env:
                         collision_layer[y, x] = 1
             np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
 
-    def set_positions(self):
-        for color in ["red", "green", "blue", "red dark"]:
-            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{color}'].txt", dtype=int)
-            positions_valid = [(x, y) for y in range(layer_collision.shape[0])
-                               for x in range(layer_collision.shape[1])
-                               if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
-            with open(self.root + f"/Data/Input/coordinates/{color}.txt", "w") as file:
-                json.dump(positions_valid, file)
+
 
     def get_positions(self):
         """Load all valid coordinates per activity."""
