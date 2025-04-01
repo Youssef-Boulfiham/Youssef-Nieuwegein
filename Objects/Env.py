@@ -20,10 +20,9 @@ from datetime import datetime, timedelta
 
 class Env:
     def __init__(self, start_date, epochs, steps_per_day=4000, breakpoint_time=None):
-        self.positions_filtered = []
-        self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
-        self.colors_activities = ["red", "green", "blue", "red dark"]
         self.activities = ["thuis", "school", "vriend thuis", "vrije tijd"]
+        self.colors_activities = ["red", "green", "blue", "red dark"]
+        self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
@@ -80,8 +79,8 @@ class Env:
         self.steps_per_day = steps_per_day
         self.steps_per_week = self.steps_per_day * 7
         self.steps_per_epoch = self.steps_per_week * 4
-        self.step = 950
-        self.step_current = 950
+        self.step = 0
+        self.step_current = 0
         # time
         self.start_date = start_date
         self.date_current = start_date
@@ -111,21 +110,21 @@ class Env:
             self.activity = "idle"
             if self.step_current == 0:
                 self.activity = "activiteit_kiezen"
-            elif self.step_current == 1000:
-                self.activity = "vrienden_maken"
-                self.positions_end = self.get_positions_end()
-            elif self.step_current == 1250:
-                self.vrienden_maken()
-                self.action = True
-            elif self.step_current == 1500:
-                self.set_agents_actions_false()
-                self.action = False
-                self.activity = "middelen_gebruiken"
-                # self.middelen_gebruiken()
-            elif self.step_current == 1750:
-                pass
-            elif self.step_current == 1950:
-                pass
+            # elif self.step_current == 1000:
+            #     self.activity = "vrienden_maken"
+            #     self.positions_end = self.get_positions_end()
+            # elif self.step_current == 1250:
+            #     self.vrienden_maken()
+            #     self.action = True
+            # elif self.step_current == 1500:
+            #     self.set_agents_actions_false()
+            #     self.action = False
+            #     self.activity = "middelen_gebruiken"
+            #     # self.middelen_gebruiken()
+            # elif self.step_current == 1750:
+            #     pass
+            # elif self.step_current == 1950:
+            #     pass
             elif self.step_current == 2000:
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 3000:
@@ -191,8 +190,8 @@ class Env:
         box_height = max(text_height + 4, 24)
 
         # Calculate position
-        screen_x = position[1] * self.cursor_zoom - self.cursor_offset[0]
-        screen_y = position[0] * self.cursor_zoom - self.cursor_offset[1]
+        screen_x = position[0] * self.cursor_zoom - self.cursor_offset[0]
+        screen_y = position[1] * self.cursor_zoom - self.cursor_offset[1]
         box_x = screen_x - box_width // 2
         box_y = screen_y - 30 - box_height
 
@@ -218,7 +217,7 @@ class Env:
             self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
 
     def get_positions(self):
-        positions_color_sorted = {}
+        positions = {}
         for activity in self.activities:
             activity_position = self.collisions[f"['{activity}']"]
             y_groups = defaultdict(list)
@@ -226,21 +225,16 @@ class Env:
                 for x in range(0, self.width):
                     if not activity_position[y][x] and x % 16 == 0 and y % 16 == 0:
                         y_groups[y].append((x, y))  # Let op!: vanag hier x, y
-            positions_filtered = []
+            activity_positions = []
             for y in y_groups:
                 group = y_groups[y]
                 for i in range(0, len(group), 2):
                     if i + 1 < len(group):
-                        positions_filtered.append(group[i])
-                        positions_filtered.append(group[i + 1])
-            # positions_color_sorted[activity] = sorted(positions_filtered, key=lambda pos: (pos[1], pos[0]))
-            # print(len(positions_filtered))
-            # self.positions_filtered = positions_color_sorted[activity]
-            self.plot_positions(activity, positions_filtered)
-            # TODO: hoeft niet meer op te slaan, gelijk onthouden, dichterbij cpu
-            # with open(self.root + f"/Data/Input/coordinates/{activity}.txt", "w") as file:
-            #     json.dump(positions_filtered, file)
-        return positions_color_sorted
+                        activity_positions.append(group[i])
+                        activity_positions.append(group[i + 1])
+            positions[activity] = sorted(activity_positions, key=lambda pos: (pos[1], pos[0]))
+            self.plot_positions(activity, activity_positions)
+        return positions
 
     def get_positions_end(self):
         # sorteer agents per activiteit
@@ -385,8 +379,8 @@ class Env:
 
     def draw_agent(self, coordinates):
         scale_factor = self.cursor_zoom
-        y_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
-        x_pos = (coordinates[1] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
+        x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
+        y_pos = (coordinates[1] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
         scaled_image = pygame.transform.scale(self.image_agent, (
             int(self.image_agent_width * scale_factor), int(self.image_agent_height * scale_factor)))
         self.screen.blit(scaled_image, (x_pos, y_pos))
@@ -396,8 +390,8 @@ class Env:
         activity_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
                            ['thuis', 'black', 'school'],
                            ['thuis', 'black', 'vrije tijd'],
-                           ['thuis', 'black', 'vriend thuis'],
-                                 {'school', 'black', 'thuis'},
+                                 ['thuis', 'black', 'vriend thuis'],
+                                 ['school', 'black', 'thuis'],
                            ['school', 'black', 'vrije tijd'],
                            ['school', 'black', 'vriend thuis'],
                            ['vrije tijd', 'black', 'thuis'],
@@ -418,22 +412,7 @@ class Env:
                     if pixels[x, y] not in colors_rgb:
                         sprite[y, x] = 1
             colissions[f"{activity}"] = sprite
-            # np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
         return colissions
-
-    # def get_positions(self):
-    #     """Load all valid coordinates per activity."""
-    #     positions_color = {}
-    #     for color in ['red', 'green', 'blue', 'red dark']:
-    #         # noinspection PyBroadException
-    #         try:
-    #             file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{color}.txt")
-    #             with open(file_path, "r") as file:
-    #                 positions_valid = ast.literal_eval(file.read())
-    #                 positions_color[color] = positions_valid
-    #         except FileNotFoundError:
-    #             print(f"\033[93mposities-activiteit-{color} nog niet berekend\033[0m")
-    #     return positions_color
 
     def get_positions_friends(self):
         """"""
@@ -449,9 +428,12 @@ class Env:
                 agents.append(Agent(
                     name=agent_counter,  # Assign sequential name
                     age=age,  # Assign the correct age from the dictionary
-                    positions_color=self.positions_color,
+                    positions_color=self.activity_colors,
                     root=self.root,
-                    agents_count=self.agents_count
+                    agents_count=self.agents_count,
+                    positions=self.positions,
+                    activities=self.activities,
+                    collisions=self.collisions
                 ))
                 agent_counter += 1
         return agents

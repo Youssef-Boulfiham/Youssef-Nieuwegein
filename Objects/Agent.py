@@ -14,38 +14,24 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, age, positions_color, root, agents_count):
+    def __init__(self, name, age, positions_color, root, agents_count, positions, activities, collisions):
         # self.agents_count = agents_count
+        self.positions = positions
         self.root = root
-        self.Pathfinding = AStar()
-        self.activity_nodes = {"thuis school": [(382, 162), (392, 172), (400, 190), (402, 202), (416, 224)],
-                               "thuis vriend thuis": [(140, 200), (152, 192), (166, 190), (182, 192), (200, 200),
-                                                      (212, 172), (232, 156), (236, 158), (224, 172),
-                                                      (204, 182), (196, 192)],
-                               "thuis vrije tijd": [(516, 402), (512, 420), (496, 438)],
-                               "school thuis": [(310, 320), (302, 300), (300, 300), (292, 286), (286, 276)],
-                               "school vriend thuis": [(266, 152), (272, 136), (276, 132), (280, 124), (266, 116),
-                                                       (292, 112), (196, 102), (236, 158)],
-                               "school vrije tijd": [(612, 332), (604, 336), (602, 342), (596, 356)],
-                               "vriend thuis thuis": [(126, 272), (132, 280), (136, 288)],
-                               "vriend thuis school": [(400, 104), (400, 112), (392, 124), (390, 132),
-                                                       (385, 148), (375, 162)],
-                               "vriend thuis vrije tijd": [(516, 402), (512, 420), (496, 438)],
-                               "vrije tijd thuis": [(342, 392), (334, 400), (328, 412)],
-                               "vrije tijd school": [(382, 162), (392, 172), (400, 190), (402, 202), (416, 224)],
-                               "vrije tijd vriend thuis": [(266, 152), (272, 136), (276, 132), (280, 124), (266, 116),
-                                                       (292, 112), (196, 102)]}
+        self.Pathfinding = AStar(collisions)
         self.activities_colors = {"thuis": "red",
                                   "school": "green",
                                   "vrije tijd": "blue",
                                   "vriend thuis": "red dark"}
+        self.activities = activities
         self.positions_color = positions_color
         #
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.age = age
 
-        self.position_current, self.activity = self.set_state()
+        self.activity = random.choice(self.activities)
+        self.position_current = random.choice(self.positions[self.activity])
         self.action = None
         # self.position_current = random.choice(self.positions_color[self.activities_colors[self.activity]])[::-1]
         self.path = []
@@ -58,18 +44,18 @@ class Agent:
         if activity == "vrienden_maken" and self.activity != "thuis":
             self.vrienden_maken(position_end)
         elif activity in ["activiteit_kiezen"]:
-            position_end, colors_allowed = self.activiteit_kiezen()
+            position_end, colors_allowed = self.activiteit_kiezen() or (None, None)
         elif len(self.path) == 0:
             result = self.idle()
             if result:
                 position_end, colors_allowed = result
             else:
-                position_end, colors_allowed = self.position_current, [self.activities_colors[self.activity]]
+                position_end, colors_allowed = self.position_current, f"['{self.activity}']"
 
         if position_end is not None and colors_allowed is not None:
             self.path += self.Pathfinding.search_path(start=self.position_current,
                                                       end=position_end,
-                                                      collors_allowed=colors_allowed)
+                                                      activity=colors_allowed)
 
         if len(self.path) == 0:
             a = 0  # If path is empty, handle this case
@@ -81,7 +67,7 @@ class Agent:
         if round(random.uniform(0, 1), 2) < 0.9 and self.activity != "vrije tijd":  # kans
             self.path = [self.position_current] * random.randint(5, 25)  # sta stil
         else:
-            return self.get_position(), [self.activities_colors[self.activity]]  # random
+            return self.get_position(), f"['{self.activity}']"  # random
 
     def activiteit_kiezen(self):
         self.path = []  # reset
@@ -94,21 +80,15 @@ class Agent:
         activity_previous = self.activity  # onthoudt vorige activiteit
         self.activity = activity_names[chosen_index]  # ga naar volgende activiteit
         ###
-        # kies voor dichtsbijzijnde positie of willekeurig
-        # als andere activiteit, loop dan naar ingang van volgende activiteit
-        if self.activity != activity_previous:
-            position_end = random.choice(self.activity_nodes[f"{activity_previous} {self.activity}"])
-        # als zelfde activiteit, loop naar willeukeurige positie in activiteitsgebied
+        if self.activity == activity_previous:
+            return self.idle()
         else:
             position_end = self.get_position()
-        return (position_end,
-                [self.activities_colors[activity_previous],
-                 "black",
-                 self.activities_colors[self.activity]])
+            return position_end, f"['{activity_previous}', 'black', '{self.activity}']"
 
     def vrienden_maken(self, position_end):
         if position_end == None:
-            a=0
+            a = 0
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  end=position_end,
                                                  collors_allowed=[self.activities_colors[self.activity]])
@@ -122,23 +102,21 @@ class Agent:
         """Geeft een valide positie IN HUIDIGE ACTIVITEIT:
             - 1e keus: positie in de buurt,
             - 2e keus: als te ver of activiteit vrije tijd dan willekeurig."""
-        color_current = self.activities_colors[self.activity]
-        # Hussel lijst zodat niet steeds dezelfde positie wordt gekozen.
-        positions = rng.permutation(self.positions_color[color_current])
+        positions_activity = self.positions[self.activity]
         # Sorteer op afstand tot huidige positie (zowel x als y)
-        positions = sorted(positions,
-                           key=lambda pos: abs(pos[0] - self.position_current[0]) + abs(
-                               pos[1] - self.position_current[1]))
+        positions = sorted(positions_activity,
+                           key=lambda pos: abs(pos[0] - self.position_current[0]) +
+                                           abs(pos[1] - self.position_current[1]))
         # Bepaal een gewogen keuze, waarbij dichterbij vaker wordt gekozen
         closer_half = positions[:len(positions) // 2]  # Selecteer de eerste helft (dichterbij)
         if closer_half and random.random() < 0.75:  # 75% kans om uit de eerste helft te kiezen
             position_nearby = random.choice(closer_half)
         else:
             position_nearby = random.choice(positions)  # Normale random keuze
-        # Als activiteit 'green' is, kies volledig willekeurig
-        if color_current == "green":
-            return random.choice(self.positions_color[color_current])[::-1]
-        return list(position_nearby[::-1])
+        # Als activiteit vrije tijd is; kies volledig willekeurig
+        if self.activity == "vrije tijd":
+            return random.choice(positions_activity)
+        return position_nearby
 
     def get_positions_friends(self):
         activities = ["school", "vrienden thuis", "vrije tijd"]
@@ -153,16 +131,6 @@ class Agent:
                 print(f"\033[93mposities-activiteit-{activity} nog niet berekend\033[0m")
                 all_positions[activity] = []
         return all_positions
-
-    def set_state(self):
-        activity = random.choice(list(self.activities_colors.keys()))
-        file_name = self.activities_colors[activity]
-        file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{file_name}.txt")
-        with open(file_path, "r") as file:
-            positions = [eval(line.strip()) for line in file.readlines() if line.strip()]
-        if positions and isinstance(positions[0], list):
-            positions = list(itertools.chain.from_iterable(positions))
-        return tuple(random.choice(positions))[::-1], activity
 
     def __repr__(self):
         return (f"'{self.name}', {self.age}, {len(self.friends)}, "
