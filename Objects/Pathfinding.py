@@ -2,7 +2,7 @@ import heapq
 
 import numpy as np
 # Let op!: current position moet tuple zijn
-
+# TODO: houdt collisions vast in init
 class AStar:
     def __init__(self):
         pass

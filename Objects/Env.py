@@ -1,3 +1,8 @@
+from PIL import Image, ImageDraw, ImageFont
+
+
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import random
@@ -18,6 +23,7 @@ class Env:
         self.positions_filtered = []
         self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
         self.colors_activities = ["red", "green", "blue", "red dark"]
+        self.activities = ["thuis", "school", "vriend thuis", "vrije tijd"]
         self.name_activity = {}
         self.action = False
         self.activity = "idle"
@@ -39,15 +45,8 @@ class Env:
             "vriend thuis": (155, 0, 0)
         }
         self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
-        self.set_collision()
-        self.set_positions()
-        # self.set_positions_friends()
-        self.positions_color = self.get_positions()
-        self.positions_color_sorted = {key: sorted(value) for key, value in self.positions_color.items()}
-        self.positions_friends = self.positions_color_sorted
+        #
         self.agents_count = sum(self.age_counts.values())
-        # self.agents = [Agent(positions_color, self.root, agents_count) for i in range(agents_count)]  # statitieken
-        self.agents = self.get_agents()
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
         self.cursor_size = 10
@@ -63,11 +62,15 @@ class Env:
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
         # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
-        self.width, self.height = self.background.get_size()
-        self.cursor_position = [self.width // 2, self.height // 2]
-        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.width, self.lenght = self.background.get_size()
+        self.cursor_position = [self.width // 2, self.lenght // 2]
+        self.screen = pygame.display.set_mode((self.width, self.lenght))
         self.clock = pygame.time.Clock()
+        #
+        self.collisions = self.set_collision()  # TODO door pasen aan pathfinding
+        self.positions = self.get_positions()
         # agent
+        self.agents = self.get_agents()
         self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         self.font = pygame.font.Font(None, 24)  # Load font once
@@ -214,37 +217,30 @@ class Env:
         if text_surface:
             self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
 
-    from collections import defaultdict
-
-    from collections import defaultdict
-
-    def set_positions(self):
+    def get_positions(self):
         positions_color_sorted = {}
-        for activity in self.colors_activities:
-            layer_collision = np.loadtxt(self.root + f"/Data/Input/collisions/['{activity}'].txt", dtype=int)
-            # filter (x%32=0, y%16=0)
-            positions = [(x, y)
-                               for x in range(layer_collision.shape[1])
-                               for y in range(layer_collision.shape[0])
-                               if not layer_collision[y, x] and x % 32 == 0 and y % 16 == 0]
-            # filter x-as op even
-            positions_filtered = []
+        for activity in self.activities:
+            activity_position = self.collisions[f"['{activity}']"]
             y_groups = defaultdict(list)
-            for x, y in positions:
-                y_groups[y].append((x, y))
-            for y in y_groups.keys():
-                y_groups[y].sort()
-                while len(y_groups[y]) >= 2:
-                    positions_filtered.append(y_groups[y].pop(0))
-                    positions_filtered.append(y_groups[y].pop(0))
-            positions_filtered.sort(key=lambda pos: (pos[1], pos[0]))
-            # positions_color_sorted[]
-            print(positions_filtered)
-            self.positions_filtered = positions_filtered
-            self.plot_positions(next(k for k, v in self.activity_colors.items() if v == activity))
-            with open(self.root + f"/Data/Input/coordinates/{activity}.txt", "w") as file:
-                json.dump(positions_filtered, file)
-
+            for y in range(self.lenght):
+                for x in range(0, self.width):
+                    if not activity_position[y][x] and x % 16 == 0 and y % 16 == 0:
+                        y_groups[y].append((x, y))  # Let op!: vanag hier x, y
+            positions_filtered = []
+            for y in y_groups:
+                group = y_groups[y]
+                for i in range(0, len(group), 2):
+                    if i + 1 < len(group):
+                        positions_filtered.append(group[i])
+                        positions_filtered.append(group[i + 1])
+            # positions_color_sorted[activity] = sorted(positions_filtered, key=lambda pos: (pos[1], pos[0]))
+            # print(len(positions_filtered))
+            # self.positions_filtered = positions_color_sorted[activity]
+            self.plot_positions(activity, positions_filtered)
+            # TODO: hoeft niet meer op te slaan, gelijk onthouden, dichterbij cpu
+            # with open(self.root + f"/Data/Input/coordinates/{activity}.txt", "w") as file:
+            #     json.dump(positions_filtered, file)
+        return positions_color_sorted
 
     def get_positions_end(self):
         # sorteer agents per activiteit
@@ -364,7 +360,7 @@ class Env:
     def clamp(self):
         """Ensure camera offset stays within bounds."""
         max_offset_x = max(0, self.width * self.cursor_zoom - self.width)
-        max_offset_y = max(0, self.height * self.cursor_zoom - self.height)
+        max_offset_y = max(0, self.lenght * self.cursor_zoom - self.lenght)
 
         self.cursor_offset[0] = max(0, min(self.cursor_offset[0], max_offset_x))
         self.cursor_offset[1] = max(0, min(self.cursor_offset[1], max_offset_y))
@@ -372,7 +368,7 @@ class Env:
     def draw_background(self):
         """Render scaled background at adjusted position."""
         scaled_bg = pygame.transform.scale(self.background,
-                                           (int(self.width * self.cursor_zoom), int(self.height * self.cursor_zoom)))
+                                           (int(self.width * self.cursor_zoom), int(self.lenght * self.cursor_zoom)))
         bg_x = -self.cursor_offset[0]
         bg_y = -self.cursor_offset[1]
         self.screen.blit(scaled_bg, (bg_x, bg_y))
@@ -381,7 +377,7 @@ class Env:
         """Draw cursor at center of screen."""
         cursor_rect = pygame.Rect(
             self.width // 2 - self.cursor_size // 2,
-            self.height // 2 - self.cursor_size // 2,
+            self.lenght // 2 - self.cursor_size // 2,
             self.cursor_size,
             self.cursor_size
         )
@@ -397,11 +393,11 @@ class Env:
 
     def set_collision(self):
         """voor pathfinding"""
-        colors_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
+        activity_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
                            ['thuis', 'black', 'school'],
                            ['thuis', 'black', 'vrije tijd'],
                            ['thuis', 'black', 'vriend thuis'],
-                           ['school', 'black', 'thuis'],
+                                 {'school', 'black', 'thuis'},
                            ['school', 'black', 'vrije tijd'],
                            ['school', 'black', 'vriend thuis'],
                            ['vrije tijd', 'black', 'thuis'],
@@ -410,69 +406,39 @@ class Env:
                            ['vriend thuis', 'black', 'thuis'],
                            ['vriend thuis', 'black', 'school'],
                            ['vriend thuis', 'black', 'vrije tijd']]
-        for i in colors_combinations:
-            colors_rgb = [self.colors[color] for color in i]
+        colissions = {}
+        for activity in activity_combinations:
+            colors_rgb = [self.colors[color] for color in activity]
             image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
             width, height = image.size
             pixels = image.load()
-            collision_layer = np.zeros((height, width), dtype=int)
+            sprite = np.zeros((height, width), dtype=int)
             for y in range(height):
                 for x in range(width):
                     if pixels[x, y] not in colors_rgb:
-                        collision_layer[y, x] = 1
-            np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
+                        sprite[y, x] = 1
+            colissions[f"{activity}"] = sprite
+            # np.savetxt(f"{self.root + "/Data/Input/collisions/"}{i}.txt", collision_layer, fmt='%d')
+        return colissions
 
-    def get_positions(self):
-        """Load all valid coordinates per activity."""
-        positions_color = {}
-        for color in ['red', 'green', 'blue', 'red dark']:
-            # noinspection PyBroadException
-            try:
-                file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{color}.txt")
-                with open(file_path, "r") as file:
-                    positions_valid = ast.literal_eval(file.read())
-                    positions_color[color] = positions_valid
-            except FileNotFoundError:
-                print(f"\033[93mposities-activiteit-{color} nog niet berekend\033[0m")
-        return positions_color
-
-    def set_positions_friends(self):
-        activities = ["school", "vriend thuis", "vrije tijd"]
-        coordinates = [[384, 336, 350, 224],
-                       [270, 462, 240, 380],
-                       [480, 624, 432, 524]]
-        all_positions = []
-        for i, activity in enumerate(activities):
-            x, y, x1, y1 = coordinates[i]
-            n = 12
-            y_values = [y + round(j * (y1 - y) / n) for j in range(n + 1)]
-            positions = [(yi, x) for yi in y_values] + [(yi, x1) for yi in y_values]
-            all_positions.append(positions)
-            #
-            file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w") as f:
-                f.write(str(positions))
-
-    import os
+    # def get_positions(self):
+    #     """Load all valid coordinates per activity."""
+    #     positions_color = {}
+    #     for color in ['red', 'green', 'blue', 'red dark']:
+    #         # noinspection PyBroadException
+    #         try:
+    #             file_path = os.path.join(self.root, "Data", "Input", "coordinates", f"{color}.txt")
+    #             with open(file_path, "r") as file:
+    #                 positions_valid = ast.literal_eval(file.read())
+    #                 positions_color[color] = positions_valid
+    #         except FileNotFoundError:
+    #             print(f"\033[93mposities-activiteit-{color} nog niet berekend\033[0m")
+    #     return positions_color
 
     def get_positions_friends(self):
-        activities = ["school", "vriend thuis", "vrije tijd"]
-        all_positions = {}  # Change this to a dictionary instead of a list
-        for activity in activities:
-            file_path = os.path.join(self.root, "Data", "Input", "positions_friends", f"{activity}.txt")
-            try:
-                with open(file_path, "r") as f:
-                    # Read the file and process each line as a tuple
-                    positions = [tuple(map(int, line.strip().strip('(),').split(','))) for line in f.readlines()]
-                    all_positions[activity] = positions
-            except FileNotFoundError:
-                print(f"\033[93mposities-activiteit-{activity} nog niet geschreven\033[0m")
-                all_positions[activity] = []
-            except ValueError as e:
-                print(f"\033[91mError processing file for activity {activity}: {e}\033[0m")
-                all_positions[activity] = []
-        return all_positions
+        """"""
+        # TODO: paren koppelen aan self.positions
+        return None
 
     def get_agents(self):
         agents = []  # Store agents in a list
@@ -508,27 +474,20 @@ class Env:
         current_epoch = (self.step - 1) // self.steps_per_epoch
         date_str = self.date_current.strftime("%Y-%m-%d")
         return f"{date_str} | step current: {self.step_current} | step: {self.step} | epoch:{current_epoch}"
-    def plot_positions(self, activity):
-        """Plots the filtered positions on a 500x700 grid with only numbered labels (no scatter points)."""
-        if not self.positions_filtered:
-            print("No positions to plot. Run set_positions() first.")
-            return
 
-        fig, ax = plt.subplots(figsize=(5, 7))  # 500x700 scale in inches (assuming 100 dpi per inch)
+    def plot_positions(self, activity, positions):
+        """Plots the given positions on a 500x700 grid with numbered labels using Pillow."""
+        img = Image.new("RGB", (self.width, self.lenght), "white")
+        draw = ImageDraw.Draw(img)
 
-        # Add only numbers at each position
-        for i, (x, y) in enumerate(self.positions_filtered):
-            ax.text(x, y, str(i + 1), fontsize=8, ha='center', va='center', color='black')
+        # Load default font
+        font = ImageFont.load_default()
 
-        # Formatting
-        ax.set_xlim(0, 500)
-        ax.set_ylim(700, 0)  # Inverting y-axis to match grid convention (top-left origin)
-        ax.set_xlabel("X Position")
-        ax.set_ylabel("Y Position")
-        ax.set_title("Filtered Positions on 500x700 Map (Numbers Only)")
-        ax.grid(True)
+        # Draw numbers at each position
+        for i, (x, y) in enumerate(positions):
+            draw.text((x, y), str(i + 1), fill="black", font=font, anchor="mm")
+
+        # Save the image
         save_path = f"/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/{activity}.png"
-        plt.savefig(save_path, dpi=100, bbox_inches="tight")
-        plt.close()
-        # Show plot
-        # plt.show()
+        img.save(save_path)
+        print(f"Plot saved: {save_path}")
