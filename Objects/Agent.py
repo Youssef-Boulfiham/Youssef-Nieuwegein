@@ -91,7 +91,7 @@ class Agent:
             a = 0
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  end=position_end,
-                                                 collors_allowed=[self.activities_colors[self.activity]])
+                                                 activity=f"['{self.activity}']")
         self.path += [position_end] * (500 - len(self.path))
 
     def middelen_gebruiken(self):

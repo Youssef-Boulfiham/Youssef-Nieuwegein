@@ -79,8 +79,8 @@ class Env:
         self.steps_per_day = steps_per_day
         self.steps_per_week = self.steps_per_day * 7
         self.steps_per_epoch = self.steps_per_week * 4
-        self.step = 0
-        self.step_current = 0
+        self.step = 950
+        self.step_current = 950
         # time
         self.start_date = start_date
         self.date_current = start_date
@@ -110,42 +110,40 @@ class Env:
             self.activity = "idle"
             if self.step_current == 0:
                 self.activity = "activiteit_kiezen"
-            # elif self.step_current == 1000:
-            #     self.activity = "vrienden_maken"
-            #     self.positions_end = self.get_positions_end()
-            # elif self.step_current == 1250:
-            #     self.vrienden_maken()
-            #     self.action = True
-            # elif self.step_current == 1500:
-            #     self.set_agents_actions_false()
-            #     self.action = False
+            elif self.step_current == 1000:
+                self.activity = "vrienden_maken"
+                self.activities_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
+            elif self.step_current == 1250:
+                self.vrienden_maken()
+                self.action = True
+            elif self.step_current == 1500:
+                self.set_agents_actions_false()
+                self.action = False
             #     self.activity = "middelen_gebruiken"
             #     # self.middelen_gebruiken()
-            # elif self.step_current == 1750:
-            #     pass
-            # elif self.step_current == 1950:
-            #     pass
             elif self.step_current == 2000:
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 3000:
                 self.activity = "vrienden_maken"
-                self.positions_end = self.get_positions_end()
+                self.activities_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
             elif self.step_current == 3250:
                 self.vrienden_maken()
                 self.action = True
             elif self.step_current == 3500:
                 self.set_agents_actions_false()
                 self.action = False
-                self.activity = "middelen_gebruiken"
+                # self.activity = "middelen_gebruiken"
+                #     # self.middelen_gebruiken()
+
             #
             #
             for agent in self.agents:
                 agent_position_end = None
                 if self.activity == "vrienden_maken":
-                    agent_position_end = self.positions_end.get(agent.name, agent.position_current)
+                    agent_position_end = self.agents_positions_pairs.get(agent.name, agent.position_current)
                 agent.step(self.activity, agent_position_end)
                 self.draw_agent(agent.position_current)
-                self.draw_textbox(agent.position_current, text=f"{agent.name, len(agent.friends)}", action=agent.action)
+                self.draw_textbox(agent.position_current, text=f"", action=agent.action)
             self.draw_step_info()
             # print(self)
             self.set_time()
@@ -223,7 +221,7 @@ class Env:
             y_groups = defaultdict(list)
             for y in range(self.lenght):
                 for x in range(0, self.width):
-                    if not activity_position[y][x] and x % 16 == 0 and y % 16 == 0:
+                    if not activity_position[y][x] and x % 32 == 0 and y % 32 == 0:
                         y_groups[y].append((x, y))  # Let op!: vanag hier x, y
             activity_positions = []
             for y in y_groups:
@@ -236,64 +234,42 @@ class Env:
             self.plot_positions(activity, activity_positions)
         return positions
 
-    def get_positions_end(self):
-        # sorteer agents per activiteit
-        activities_agents = {"vrije tijd": [], "school": [], "vriend thuis": []}
+    def get_positions_pairs(self):
+        # Sort agents per activity
+        activities_agents_names = {"vrije tijd": [], "school": [], "vriend thuis": []}
         for agent in self.agents:
-            if agent.activity in activities_agents:
-                activities_agents[agent.activity].append(agent.name)
+            if agent.activity != "thuis":
+                activities_agents_names[agent.activity].append(agent.name)
 
-        agents_positions_end = {}
-        for activity, agent_names in activities_agents.items():
-            color = self.activity_colors[activity]
-            valid_positions = self.positions_color_sorted[color]  # Already filtered by `set_positions`
-
-            # Step 4: Assign agents to positions and print pairs per row
-            for agent_name, position in zip(agent_names, valid_positions):
-                current_position = self.agents[
-                    agent_name].position_current  # Assuming this method gets current position
-                agents_positions_end[agent_name] = tuple(position)[::-1]
-
-                # Print agent info with current position, end position, name, and activity
-                print(
-                    f"Agent: {agent_name} | Activity: {activity} | Current Position: {current_position} | End Position: {position}")
-
-        return agents_positions_end
+        agents_positions_pairs = {}
+        for activity, agent_names in activities_agents_names.items():
+            for i in range(0, len(agent_names) & ~1, 2):
+                print(self.positions[activity][i], self.positions[activity][i + 1])
+                agents_positions_pairs[agent_names[i]] = self.positions[activity][i]
+                agents_positions_pairs[agent_names[i+1]] = self.positions[activity][i+1]
+        return activities_agents_names, agents_positions_pairs
 
     def vrienden_maken(self):
-        agents = sorted(self.positions_end.keys(), key=lambda name: self.positions_end[name])  # Ensure correct order
-
-        pairwise = lambda it: zip(it[::2], it[1::2])  # Guarantees adjacent pairing
         friendship_status = {}
+        for activity, agent_names in self.activities_agents_names.items():
+            for i in range(0, len(agent_names) & ~1, 2):
+                print(activity, agent_names[i], agent_names[i + 1])
+                agent_left = self.agents[agent_names[i]]
+                agent_right = self.agents[agent_names[i + 1]]
 
-        for agent_left_name, agent_right_name in pairwise(agents):
-            agent_left = self.agents[agent_left_name]
-            agent_right = self.agents[agent_right_name]
-
-            if agent_left.friend_request.get(agent_right_name, 0) < 5 and \
-                    agent_right_name not in agent_left.friends and \
-                    len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
-                    random.getrandbits(1):
-
-                agent_left.friends.append(agent_right_name)
-                agent_right.friends.append(agent_left_name)
-
-                agent_left.action, agent_right.action = "checkmark", "checkmark"
-                friendship_status[agent_left_name] = True
-                friendship_status[agent_right_name] = True
-
-                print(f"{agent_left_name} and {agent_right_name} became friends!")
-
-            else:
-                friendship_status[agent_left_name] = False
-                friendship_status[agent_right_name] = False
-
-        # Handle an unpaired agent (if odd number of agents)
-        if len(agents) % 2 == 1:
-            last_agent = self.agents[agents[-1]]
-            friendship_status[agents[-1]] = False
-            print(f"{agents[-1]} has no pair and made no new friends.")
-
+                if agent_left.friend_request.get(agent_right.name, 0) < 5 and \
+                        agent_right.name not in agent_left.friends and \
+                        len(agent_left.friends) < 5 and len(agent_right.friends) < 5 and \
+                        random.getrandbits(1):
+                    agent_left.friends.append(agent_right.name)
+                    agent_right.friends.append(agent_left.name)
+                    agent_left.action, agent_right.action = "checkmark", "checkmark"
+                    friendship_status[agent_left.name] = True
+                    friendship_status[agent_right.name] = True
+                    print(f"{agent_left.name} and {agent_right.name} became friends!")
+                else:
+                    friendship_status[agent_left.name] = False
+                    friendship_status[agent_right.name] = False
         return friendship_status
 
     def move_cursor(self, dx, dy):
