@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 
 if __name__ == "__main__":
-    date_start = datetime(2024, 1, 1)
+    date_start = datetime(2025, 1, 1)
     epochs = 3
     # steps_per_day = 1000
     # steps_per_day = 1

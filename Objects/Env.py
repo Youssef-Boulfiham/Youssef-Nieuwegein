@@ -276,8 +276,11 @@ class Env:
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
+        # Apply zoom to movement deltas
         self.cursor_offset[0] -= dx * self.cursor_step * self.cursor_zoom
         self.cursor_offset[1] -= dy * self.cursor_step * self.cursor_zoom
+
+        # Clamp to prevent moving beyond bounds
         self.clamp()
 
     def draw_step_info(self):
@@ -357,10 +360,18 @@ class Env:
 
     def draw_agent(self, coordinates):
         scale_factor = self.cursor_zoom
-        x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
-        y_pos = (coordinates[1] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
-        scaled_image = pygame.transform.scale(self.image_agent, (
-            int(self.image_agent_width * scale_factor), int(self.image_agent_height * scale_factor)))
+
+        # Swap x and y axis to match the movement and zoom behavior
+        x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
+        y_pos = (coordinates[1] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
+
+        # Scale the agent image based on the zoom factor
+        scaled_image = pygame.transform.scale(
+            self.image_agent,
+            (int(self.image_agent_width * scale_factor), int(self.image_agent_height * scale_factor))
+        )
+
+        # Draw the agent on the screen
         self.screen.blit(scaled_image, (x_pos, y_pos))
 
     def set_collision(self):
