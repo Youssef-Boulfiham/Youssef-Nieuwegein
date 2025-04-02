@@ -60,7 +60,7 @@ class Env:
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
-        self.background = pygame.image.load(self.root + "/graphics/enviroment_raster.png")
+        # self.background = pygame.image.load(self.root + "/graphics/enviroment_raster.png")
         # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
         self.width, self.lenght = self.background.get_size()
         self.cursor_position = [self.width // 2, self.lenght // 2]
@@ -363,8 +363,8 @@ class Env:
         scale_factor = self.cursor_zoom
 
         # Define your offsets for adjusting position
-        offset_x = -22  # Adjust this value to your desired horizontal offset
-        offset_y = 20  # Adjust this value to your desired vertical offset
+        offset_x = -4  # Adjust this value to your desired horizontal offset
+        offset_y = -16 # Adjust this value to your desired vertical offset
 
         # Swap x and y axis to match the movement and zoom behavior
         x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[
