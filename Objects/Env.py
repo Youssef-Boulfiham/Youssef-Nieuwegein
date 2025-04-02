@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 
-
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
@@ -84,10 +84,7 @@ class Env:
         # time
         self.start_date = start_date
         self.date_current = start_date
-        self.breakpoint_time = breakpoint_time  # Time to trigger breakpoint
         while True:
-
-            # self.check_breakpoint()  # Check if we are at the breakpoint
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -106,7 +103,7 @@ class Env:
                 self.zoom(-1)
             self.draw_cursor()
             self.draw_background()
-            ##
+            #
             self.activity = "idle"
             if self.step_current == 0:
                 self.activity = "activiteit_kiezen"
@@ -215,7 +212,7 @@ class Env:
             self.screen.blit(text_surface, (text_x, box_y + (box_height - text_height) // 2))
 
     def get_positions(self):
-        positions = {}
+        positions_activity = {}
         for activity in self.activities:
             activity_position = self.collisions[f"['{activity}']"]
             y_groups = defaultdict(list)
@@ -223,16 +220,21 @@ class Env:
                 for x in range(0, self.width):
                     if not activity_position[y][x] and x % 32 == 0 and y % 32 == 0:
                         y_groups[y].append((x, y))  # Let op!: vanag hier x, y
-            activity_positions = []
+            positions = []
             for y in y_groups:
                 group = y_groups[y]
                 for i in range(0, len(group), 2):
                     if i + 1 < len(group):
-                        activity_positions.append(group[i])
-                        activity_positions.append(group[i + 1])
-            positions[activity] = sorted(activity_positions, key=lambda pos: (pos[1], pos[0]))
-            self.plot_positions(activity, activity_positions)
-        return positions
+                        positions.append(group[i])
+                        positions.append(group[i + 1])
+            positions = sorted(positions, key=lambda pos: (pos[1], pos[0]))
+            positions = [(positions[i], positions[i + 1])
+                                  for i in range(0, len(positions) - 1, 2)]
+            random.shuffle(positions)
+            positions = [coord for pair in positions for coord in pair]
+            positions_activity[activity] = positions
+            self.plot_positions(activity, positions)
+        return positions_activity
 
     def get_positions_pairs(self):
         # Sort agents per activity
@@ -246,7 +248,7 @@ class Env:
             for i in range(0, len(agent_names) & ~1, 2):
                 print(self.positions[activity][i], self.positions[activity][i + 1])
                 agents_positions_pairs[agent_names[i]] = self.positions[activity][i]
-                agents_positions_pairs[agent_names[i+1]] = self.positions[activity][i+1]
+                agents_positions_pairs[agent_names[i + 1]] = self.positions[activity][i + 1]
         return activities_agents_names, agents_positions_pairs
 
     def vrienden_maken(self):
@@ -364,18 +366,18 @@ class Env:
     def set_collision(self):
         """voor pathfinding"""
         activity_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
-                           ['thuis', 'black', 'school'],
-                           ['thuis', 'black', 'vrije tijd'],
+                                 ['thuis', 'black', 'school'],
+                                 ['thuis', 'black', 'vrije tijd'],
                                  ['thuis', 'black', 'vriend thuis'],
                                  ['school', 'black', 'thuis'],
-                           ['school', 'black', 'vrije tijd'],
-                           ['school', 'black', 'vriend thuis'],
-                           ['vrije tijd', 'black', 'thuis'],
-                           ['vrije tijd', 'black', 'school'],
-                           ['vrije tijd', 'black', 'vriend thuis'],
-                           ['vriend thuis', 'black', 'thuis'],
-                           ['vriend thuis', 'black', 'school'],
-                           ['vriend thuis', 'black', 'vrije tijd']]
+                                 ['school', 'black', 'vrije tijd'],
+                                 ['school', 'black', 'vriend thuis'],
+                                 ['vrije tijd', 'black', 'thuis'],
+                                 ['vrije tijd', 'black', 'school'],
+                                 ['vrije tijd', 'black', 'vriend thuis'],
+                                 ['vriend thuis', 'black', 'thuis'],
+                                 ['vriend thuis', 'black', 'school'],
+                                 ['vriend thuis', 'black', 'vrije tijd']]
         colissions = {}
         for activity in activity_combinations:
             colors_rgb = [self.colors[color] for color in activity]
