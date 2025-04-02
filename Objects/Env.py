@@ -60,6 +60,7 @@ class Env:
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
+        self.background = pygame.image.load(self.root + "/graphics/enviroment_raster.png")
         # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
         self.width, self.lenght = self.background.get_size()
         self.cursor_position = [self.width // 2, self.lenght // 2]
@@ -79,8 +80,8 @@ class Env:
         self.steps_per_day = steps_per_day
         self.steps_per_week = self.steps_per_day * 7
         self.steps_per_epoch = self.steps_per_week * 4
-        self.step = 950
-        self.step_current = 950
+        self.step = 999
+        self.step_current = 999
         # time
         self.start_date = start_date
         self.date_current = start_date
@@ -361,9 +362,15 @@ class Env:
     def draw_agent(self, coordinates):
         scale_factor = self.cursor_zoom
 
+        # Define your offsets for adjusting position
+        offset_x = -22  # Adjust this value to your desired horizontal offset
+        offset_y = 20  # Adjust this value to your desired vertical offset
+
         # Swap x and y axis to match the movement and zoom behavior
-        x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[0] - self.image_agent_width // 2
-        y_pos = (coordinates[1] * scale_factor) - self.cursor_offset[1] - self.image_agent_height // 2
+        x_pos = (coordinates[0] * scale_factor) - self.cursor_offset[
+            0] - self.image_agent_width // 2 + offset_x  # Adjust x_pos with offset_x
+        y_pos = (coordinates[1] * scale_factor) - self.cursor_offset[
+            1] - self.image_agent_height // 2 + offset_y  # Adjust y_pos with offset_y
 
         # Scale the agent image based on the zoom factor
         scaled_image = pygame.transform.scale(
