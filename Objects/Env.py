@@ -29,9 +29,10 @@ class Env:
         # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
         # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
-        self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
         # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
-        # self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
+        self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -181,7 +182,8 @@ class Env:
         text_width, text_height = text_surface.get_size() if text_surface else (0, 0)
 
         # Calculate box size
-        pictogram_width = 24 if show_pictogram else 0
+        pictogram_width = 12 if show_pictogram else 0  # Half of 24
+        pictogram_height = 12  # Half of 24
         box_width = text_width + pictogram_width + 4
         box_height = max(text_height + 4, 24)
 
@@ -203,10 +205,10 @@ class Env:
             if action not in self.pictogram_cache:
                 self.pictogram_cache[action] = pygame.transform.scale(
                     pygame.image.load(os.path.join(self.root, f"graphics/{action}.png")),
-                    self.pictogram_size
+                    (pictogram_width, pictogram_height)
                 )
-            self.screen.blit(self.pictogram_cache[action], (text_x, box_y + (box_height - self.pictogram_size[1]) // 2))
-            text_x += 24
+            self.screen.blit(self.pictogram_cache[action], (text_x, box_y + (box_height - pictogram_height) // 2))
+            text_x += pictogram_width
 
         # Draw text if available
         if text_surface:
@@ -219,7 +221,7 @@ class Env:
             y_groups = defaultdict(list)
             for y in range(self.lenght):
                 for x in range(0, self.width):
-                    if not activity_position[y][x] and x % 32 == 0 and y % 32 == 0:
+                    if not activity_position[y][x] and x % 16 == 0 and y % 16 == 0:
                         y_groups[y].append((x, y))  # Let op!: vanag hier x, y
             positions = []
             for y in y_groups:
