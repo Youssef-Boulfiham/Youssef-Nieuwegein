@@ -30,9 +30,10 @@ class Env:
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
         # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
         # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        self.fixed_drinker_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 4, 17: 4, 18: 5}
+
         #
         self.colors = {
             "black": (0, 0, 0),
@@ -81,8 +82,8 @@ class Env:
         self.steps_per_day = steps_per_day
         self.steps_per_week = self.steps_per_day * 7
         self.steps_per_epoch = self.steps_per_week * 4
-        self.step = 999
-        self.step_current = 999
+        self.step = self.steps_per_epoch - self.steps_per_day -1
+        self.step_current = self.step
         # time
         self.start_date = start_date
         self.date_current = start_date
@@ -118,8 +119,8 @@ class Env:
             elif self.step_current == 1500:
                 self.set_agents_actions_false()
                 self.action = False
-            #     self.activity = "middelen_gebruiken"
-            #     # self.middelen_gebruiken()
+                self.activity = "middelen_gebruiken"
+                self.middelen_gebruiken()
             elif self.step_current == 2000:
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 3000:
@@ -153,17 +154,76 @@ class Env:
 
     def middelen_gebruiken(self):
         """TEST DIT IN NOTEBOOK"""
-        substance = "alcohol"
+        # TODO: koppelen inefficient, duppelop
+        pings = self.get_pings()  # {age: number_of_drinkers_this_epoch}
 
-        for agent in self.agents:
-            # print(agent.age, self.binge_percentages[agent.age], 24, self.age_counts[agent.age], self.binge_percentages[agent.age]/24/self.age_counts[agent.age])
-            rn = round(random.uniform(1, 100), 1)
-            # F= percentage bingedrinkers gegeven leeftijd / aantal agents gegeven leeftijd/ 4 weken
-            threshold = self.binge_percentages[agent.age] / 24
-            change = True if threshold >= rn else False
-            if change == True:
-                print(rn, change)
+        for age, num_pings in pings.items():
+            if num_pings == 0:
+                continue
+
+            # Get all agents of this age
+            agents_of_age = [agent for agent in self.agents if agent.age == age]
+
+            # Sort agents by resistance (lowest first)
+            agents_sorted = sorted(agents_of_age, key=lambda agent: agent.resistance)
+
+            # Select the agents with the lowest resistance to assign pings
+            for agent in agents_sorted[:num_pings]:
+                agent.substance_count += 1  # Track usage
+                print(f"Agent {agent.name} (age {agent.age}) used a substance.")
+
         return 0
+
+    def get_pings(self):
+        """
+        Returns a dictionary {age: number_of_drinkers_this_epoch} for the given epoch.
+        """
+        age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        binge_percentages = {12: 0.8, 13: 2.5, 14: 5.5, 15: 13, 16: 37, 17: 50, 18: 88}
+        fixed_drinker_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 4, 17: 4, 18: 5}
+        results = {}
+
+        for age, count in age_counts.items():
+            num_drinkers = fixed_drinker_counts[age]
+            binge_percentage = binge_percentages[age]
+
+            # Willekeurige drinkers aanwijzen
+            is_drinker = np.zeros(count, dtype=bool)
+            is_drinker[:num_drinkers] = True
+            np.random.shuffle(is_drinker)
+
+            # Weerstand toekennen aan drinkers
+            resistance = np.zeros(count)
+            resistances = np.random.uniform(0.05, 0.95, size=num_drinkers)
+            np.random.shuffle(resistances)
+
+            index = 0
+            for i in range(count):
+                if is_drinker[i]:
+                    resistance[i] = resistances[index]
+                    index += 1
+
+            # Genereer één ping-waarde voor deze epoch
+            # Voeg ruis toe aan het percentage
+            adjusted_percentage = max(0, min(binge_percentage + np.random.normal(0, 1.5), 100))
+            mean_total_pings = adjusted_percentage / 100 * num_drinkers
+            std_dev = max(1, mean_total_pings * np.random.uniform(0.08, 0.15))
+
+            # Genereer waarde voor deze specifieke epoch
+            # GAUSSIAN DISTRIBUTION
+            ping_value = int(np.random.normal(mean_total_pings, std_dev))
+            ping_value = max(0, min(ping_value, num_drinkers))
+
+            if ping_value > 0:
+                drinker_indices = np.where(is_drinker)[0]
+                weights = np.array([1.0 - resistance[i] for i in drinker_indices])
+                weights /= weights.sum()
+                selected = np.random.choice(drinker_indices, ping_value, replace=False, p=weights)
+                results[age] = len(selected)
+            else:
+                results[age] = 0
+
+        return results
 
     def set_agents_actions_false(self):
         for agent in self.agents:
@@ -249,7 +309,7 @@ class Env:
         agents_positions_pairs = {}
         for activity, agent_names in activities_agents_names.items():
             for i in range(0, len(agent_names) & ~1, 2):
-                print(self.positions[activity][i], self.positions[activity][i + 1])
+                # print(self.positions[activity][i], self.positions[activity][i + 1])
                 agents_positions_pairs[agent_names[i]] = self.positions[activity][i]
                 agents_positions_pairs[agent_names[i + 1]] = self.positions[activity][i + 1]
         return activities_agents_names, agents_positions_pairs
@@ -258,7 +318,7 @@ class Env:
         friendship_status = {}
         for activity, agent_names in self.activities_agents_names.items():
             for i in range(0, len(agent_names) & ~1, 2):
-                print(activity, agent_names[i], agent_names[i + 1])
+                # print(activity, agent_names[i], agent_names[i + 1])
                 agent_left = self.agents[agent_names[i]]
                 agent_right = self.agents[agent_names[i + 1]]
 
@@ -271,7 +331,7 @@ class Env:
                     agent_left.action, agent_right.action = "checkmark", "checkmark"
                     friendship_status[agent_left.name] = True
                     friendship_status[agent_right.name] = True
-                    print(f"{agent_left.name} and {agent_right.name} became friends!")
+                    # print(f"{agent_left.name} and {agent_right.name} became friends!")
                 else:
                     friendship_status[agent_left.name] = False
                     friendship_status[agent_right.name] = False
@@ -412,20 +472,21 @@ class Env:
             colissions[f"{activity}"] = sprite
         return colissions
 
-    def get_positions_friends(self):
-        """"""
-        # TODO: paren koppelen aan self.positions
-        return None
+    import numpy as np
 
     def get_agents(self):
         agents = []  # Store agents in a list
         agent_counter = 0  # To keep track of agent names from 0 to total count
 
         for age, count in self.age_counts.items():  # Loop through age and count
-            for _ in range(count):
+            # Generate evenly distributed resistance levels between 0.01 and 0.99
+            resistance_levels = np.linspace(0.01, 0.99, count)
+
+            for resistance in resistance_levels:
                 agents.append(Agent(
                     name=agent_counter,  # Assign sequential name
                     age=age,  # Assign the correct age from the dictionary
+                    resistance=resistance,  # Add resistance input here
                     positions_color=self.activity_colors,
                     root=self.root,
                     agents_count=self.agents_count,
@@ -434,6 +495,7 @@ class Env:
                     collisions=self.collisions
                 ))
                 agent_counter += 1
+
         return agents
 
     def set_time(self):

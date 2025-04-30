@@ -14,7 +14,7 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, age, positions_color, root, agents_count, positions, activities, collisions):
+    def __init__(self, name, age, resistance, positions_color, root, agents_count, positions, activities, collisions):
         # self.agents_count = agents_count
         self.positions = positions
         self.root = root
@@ -29,6 +29,8 @@ class Agent:
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.age = age
+        self.resistance = resistance
+        self.substance_count = 0
 
         self.activity = random.choice(self.activities)
         self.position_current = random.choice(self.positions[self.activity])
@@ -138,4 +140,4 @@ class Agent:
 
     def __str__(self):
         return str(
-            f"{self.name}, {self.age}, {len(self.friends)}, {self.position_current}, p={len(self.path)}, {self.activity}, {self.action}")
+            f"{self.name}, {self.age}, resistance=  {self.resistance}, {len(self.friends)}, {self.position_current}, p={len(self.path)}, {self.activity}, {self.action}")
