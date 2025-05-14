@@ -1,7 +1,9 @@
+a=0
+a=1
 from Objects.Env import Env
 from datetime import datetime
 import matplotlib
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 
 if __name__ == "__main__":
     date_start = datetime(2025, 1, 1)

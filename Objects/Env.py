@@ -1,8 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont
+from pathlib import Path
 
 import matplotlib
 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from collections import Counter, defaultdict
 import random
@@ -45,7 +46,7 @@ class Env:
             "brown": (143, 110, 26),
             "vriend thuis": (155, 0, 0)
         }
-        self.root = "/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/"
+        self.root = Path(__file__).parent.parent
         #
         self.agents_count = sum(self.age_counts.values())
         self.cursor_zooms = [1.0, 2.0, 4.0]
@@ -61,7 +62,7 @@ class Env:
         # pygame
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
-        self.background = pygame.image.load(self.root + "/graphics/enviroment_background.png")
+        self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_background.png"))
         # self.background = pygame.image.load(self.root + "/graphics/enviroment_raster.png")
         # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
         self.width, self.lenght = self.background.get_size()
@@ -73,7 +74,7 @@ class Env:
         self.positions = self.get_positions()
         # agent
         self.agents = self.get_agents()
-        self.image_agent = pygame.image.load(self.root + "/graphics/Agent_front.png").convert_alpha()
+        self.image_agent = pygame.image.load(str(self.root / "graphics" / "Agent_front.png")).convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         self.font = pygame.font.Font(None, 24)  # Load font once
         #
@@ -461,7 +462,7 @@ class Env:
         colissions = {}
         for activity in activity_combinations:
             colors_rgb = [self.colors[color] for color in activity]
-            image = Image.open(self.root + "/graphics/enviroment_activity.png").convert("RGB")
+            image = Image.open(self.root / "graphics" / "enviroment_activity.png").convert("RGB")
             width, height = image.size
             pixels = image.load()
             sprite = np.zeros((height, width), dtype=int)
@@ -530,6 +531,6 @@ class Env:
             draw.text((x, y), str(i + 1), fill="black", font=font, anchor="mm")
 
         # Save the image
-        save_path = f"/Users/youssefboulfiham/PycharmProjects/pythonProject/Youssef-Nieuwegein/Data/Input/{activity}.png"
+        save_path = self.root / "Data" / "Input" / f"{activity}.png"
         img.save(save_path)
         print(f"Plot saved: {save_path}")
