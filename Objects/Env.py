@@ -1,11 +1,6 @@
-from PIL import Image, ImageDraw, ImageFont
+from PIL import ImageDraw, ImageFont
 from pathlib import Path
-
-import matplotlib
-
-# matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from collections import Counter, defaultdict
+from collections import defaultdict
 import random
 import os
 import numpy as np
@@ -13,10 +8,7 @@ import pygame
 import time
 from PIL import Image
 from Objects.Agent import Agent
-import ast
-import json
-from itertools import tee
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 
 class Env:
@@ -29,13 +21,10 @@ class Env:
         self.activity = "idle"
         # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
-        # self.age_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 3, 18: 3}
         # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
         self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
-        self.fixed_drinker_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 4, 17: 4, 18: 5}
-
-        #
+        self.fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
         self.colors = {
             "black": (0, 0, 0),
             "white": (255, 255, 255),
@@ -47,7 +36,6 @@ class Env:
             "vriend thuis": (155, 0, 0)
         }
         self.root = Path(__file__).parent.parent
-        #
         self.agents_count = sum(self.age_counts.values())
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
@@ -58,13 +46,12 @@ class Env:
         self.pictogram_cache = {}  # Cache for loaded pictograms
         self.textbox_color = (181, 101, 29, 128)  # Textbox color with transparency
         self.pictogram_size = (20, 20)  # Fixed pictogram size
-        #
         # pygame
         pygame.init()
         pygame.display.set_caption("Omgeving Simulatie")
         self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_background.png"))
-        # self.background = pygame.image.load(self.root + "/graphics/enviroment_raster.png")
-        # self.background = pygame.image.load(self.root + "/graphics/enviroment_activity.png")
+        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_raster.png"))
+        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_activity.png"))
         self.width, self.lenght = self.background.get_size()
         self.cursor_position = [self.width // 2, self.lenght // 2]
         self.screen = pygame.display.set_mode((self.width, self.lenght))
@@ -77,7 +64,6 @@ class Env:
         self.image_agent = pygame.image.load(str(self.root / "graphics" / "Agent_front.png")).convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         self.font = pygame.font.Font(None, 24)  # Load font once
-        #
         # step
         self.epochs = epochs
         self.steps_per_day = steps_per_day
@@ -135,9 +121,6 @@ class Env:
                 self.action = False
                 # self.activity = "middelen_gebruiken"
                 #     # self.middelen_gebruiken()
-
-            #
-            #
             for agent in self.agents:
                 agent_position_end = None
                 if self.activity == "vrienden_maken":
@@ -178,6 +161,7 @@ class Env:
     def get_pings(self):
         """
         Returns a dictionary {age: number_of_drinkers_this_epoch} for the given epoch.
+        geeft drinkers terug
         """
         age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
         binge_percentages = {12: 0.8, 13: 2.5, 14: 5.5, 15: 13, 16: 37, 17: 50, 18: 88}
