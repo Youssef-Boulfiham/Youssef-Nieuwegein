@@ -16,6 +16,7 @@ import ast
 class Agent:
     def __init__(self, name, color_positions, root):
         self.root = root
+        #
         self.df = pd.read_csv(f'{self.root}/Data/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.position_current = (250, 100)
@@ -26,6 +27,7 @@ class Agent:
         self.friend_request = {}
         #
         self.Pathfinding = AStar()
+        self.color_positions = color_positions
         self.activity_nodes = {"thuis school": [(255, 300)], "thuis vriend thuis": [(368, 256)],
                                "thuis vrije tijd": [(575, 400)],
                                "school thuis": [(224, 175)], "school vriend thuis": [(368, 256)],
@@ -38,7 +40,6 @@ class Agent:
                                   "school": "green",
                                   "vrije tijd": "blue",
                                   "vriend thuis": "red dark"}
-        self.color_positions = color_positions
 
     def __str__(self):
         return str(f"{self.action}")
@@ -61,9 +62,6 @@ class GUI:
         self.agents = [Agent(i, positions_color, self.root) for i in range(agents_count_)]
         self.name_activity = {}
 
-
-
-
     def step(self):
         self.name_activity = {agent.name: agent.activity for agent in self.agents}
 
@@ -71,6 +69,7 @@ class GUI:
         """Load all valid coordinates per activity."""
         color_positions = {}
         for color in ['red', 'green', 'blue', 'red dark']:
+            # noinspection PyBroadException
             try:
                 file_path = os.path.join(self.root, f"Data/coordinates/{color}.txt")
                 with open(file_path, "r") as file:
@@ -126,4 +125,4 @@ class GUI:
 agents_count = 5
 game = GUI(agents_count)
 game.step()
-print(game.name_activity)  # {'Alice': 'idle', 'Bob': 'idle', 'Charlie': 'idle'}
+print(game.name_activity)
