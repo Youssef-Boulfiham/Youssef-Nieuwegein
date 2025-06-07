@@ -14,7 +14,7 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, age, resistance, positions_color, root, agents_count, positions, activities, collisions):
+    def __init__(self, name, age, fixed_drinker, resistance, positions_color, root, agents_count, positions, activities, collisions):
         # self.agents_count = agents_count
         self.positions = positions
         self.root = root
@@ -29,6 +29,8 @@ class Agent:
         self.df = pd.read_csv(f'{self.root}/Data/Input/df_player.csv', sep=';', dtype=float)
         self.name = name
         self.age = age
+        # TODO: volgende is voor middelen gebruiken
+        self.fixed_drinker = fixed_drinker
         self.resistance = resistance
         self.substance_count = 0
 
@@ -94,7 +96,7 @@ class Agent:
         self.path = self.Pathfinding.search_path(start=self.position_current,
                                                  end=position_end,
                                                  activity=f"['{self.activity}']")
-        self.path += [position_end] * (500 - len(self.path))
+        self.path += [position_end] * (450 - len(self.path))
 
     def middelen_gebruiken(self):
         return (self.get_position(),  # goal

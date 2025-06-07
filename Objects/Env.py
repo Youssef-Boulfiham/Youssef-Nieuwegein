@@ -108,7 +108,11 @@ class Env:
                 self.action = False
                 self.activity = "middelen_gebruiken"
                 self.middelen_gebruiken()
+            elif self.step_current == 1550:
+                self.action = True
             elif self.step_current == 2000:
+                self.set_agents_actions_false()
+                self.step_current = False
                 self.activity = "activiteit_kiezen"
             elif self.step_current == 3000:
                 self.activity = "vrienden_maken"
@@ -137,25 +141,52 @@ class Env:
         pygame.quit()
 
     def middelen_gebruiken(self):
-        """TEST DIT IN NOTEBOOK"""
-        # TODO: koppelen inefficient, duppelop
         pings = self.get_pings()  # {age: number_of_drinkers_this_epoch}
 
         for age, num_pings in pings.items():
             if num_pings == 0:
                 continue
 
-            # Get all agents of this age
-            agents_of_age = [agent for agent in self.agents if agent.age == age]
+            # Select all agents of this age with fixed_drinker = True
+            fixed_drinkers = [agent for agent in self.agents if agent.age == age and agent.fixed_drinker]
 
-            # Sort agents by resistance (lowest first)
-            agents_sorted = sorted(agents_of_age, key=lambda agent: agent.resistance)
+            if not fixed_drinkers:
+                continue
 
-            # Select the agents with the lowest resistance to assign pings
-            for agent in agents_sorted[:num_pings]:
-                agent.substance_count += 1  # Track usage
+            # Sorteer op weerstand (laagste eerst)
+            sorted_agents = sorted(fixed_drinkers, key=lambda a: a.resistance)
+
+            # Stel een kansmodel op: hoe lager weerstand en hoe hoger gebruik, hoe groter de kans
+            candidates = []
+            for agent in sorted_agents:
+                # Gebruik een basiswaarde (bijv. 1 - weerstand), en verhoog met gebruiksfrequentie
+                base_chance = 1 - agent.resistance
+                usage_factor = 1 + (agent.substance_count * 0.1)  # Elke eerdere keer verhoogt kans met 10%
+                chance = base_chance * usage_factor
+                candidates.append((agent, chance))
+
+            # Normaliseer kansen
+            total_chance = sum(chance for _, chance in candidates)
+            if total_chance == 0:
+                continue
+
+            normalized = [(agent, chance / total_chance) for agent, chance in candidates]
+
+            # Kies agents op basis van genormaliseerde kansen
+            selected_agents = np.random.choice(
+                [agent for agent, _ in normalized],
+                size=min(num_pings, len(normalized)),
+                replace=False,
+                p=[chance for _, chance in normalized]
+            )
+
+            for agent in selected_agents:
+                agent.substance_count += 1
+                # TODO
+                agent.action = "substance use"
                 print(f"Agent {agent.name} (age {agent.age}) used a substance.")
 
+        print()
         return 0
 
     def get_pings(self):
@@ -164,8 +195,10 @@ class Env:
         geeft drinkers terug
         """
         age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
+        age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
         binge_percentages = {12: 0.8, 13: 2.5, 14: 5.5, 15: 13, 16: 37, 17: 50, 18: 88}
         fixed_drinker_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 4, 17: 4, 18: 5}
+        fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
         results = {}
 
         for age, count in age_counts.items():
@@ -314,13 +347,13 @@ class Env:
                     agent_left.friends.append(agent_right.name)
                     agent_right.friends.append(agent_left.name)
                     agent_left.action, agent_right.action = "checkmark", "checkmark"
-                    friendship_status[agent_left.name] = True
-                    friendship_status[agent_right.name] = True
+                    # friendship_status[agent_left.name] = True
+                    # friendship_status[agent_right.name] = True
                     # print(f"{agent_left.name} and {agent_right.name} became friends!")
-                else:
-                    friendship_status[agent_left.name] = False
-                    friendship_status[agent_right.name] = False
-        return friendship_status
+                # else:
+                    # friendship_status[agent_left.name] = False
+                    # friendship_status[agent_right.name] = False
+        # return friendship_status
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
@@ -462,16 +495,24 @@ class Env:
     def get_agents(self):
         agents = []  # Store agents in a list
         agent_counter = 0  # To keep track of agent names from 0 to total count
+        fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
 
         for age, count in self.age_counts.items():  # Loop through age and count
-            # Generate evenly distributed resistance levels between 0.01 and 0.99
             resistance_levels = np.linspace(0.01, 0.99, count)
+            fixed_drinker_limit = fixed_drinker_counts.get(age, 0)
+            fixed_drinker_assigned = 0  # Keep track of how many have been assigned
 
             for resistance in resistance_levels:
+                fixed_drinker = False
+                if fixed_drinker_assigned < fixed_drinker_limit:
+                    fixed_drinker = True
+                    fixed_drinker_assigned += 1
+
                 agents.append(Agent(
-                    name=agent_counter,  # Assign sequential name
-                    age=age,  # Assign the correct age from the dictionary
-                    resistance=resistance,  # Add resistance input here
+                    name=agent_counter,
+                    age=age,
+                    fixed_drinker=fixed_drinker,
+                    resistance=resistance,
                     positions_color=self.activity_colors,
                     root=self.root,
                     agents_count=self.agents_count,
