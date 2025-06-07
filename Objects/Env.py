@@ -133,6 +133,7 @@ class Env:
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, text=f"", action=agent.action)
             self.draw_step_info()
+            self.draw_progress_cursor(self.screen, self.step_current, 2000, self.width, self.lenght)
             # print(self)
             self.set_time()
             #
@@ -536,6 +537,21 @@ class Env:
 
     # def __repr__(self):
     # return f"{self.step_counter}, '{self.activity}'"
+
+    def draw_progress_cursor(self, screen, current_step, max_steps, width, height):
+        stick_height = 34
+        stick_width = 3
+        y_pos = int(height * 0.947)  # Position near the bottom
+
+        # Clamp current_step to avoid overflow
+        # current_step = max(0, min(current_step, max_steps))
+        current_step = current_step % 2000
+        # Calculate x-position as a fraction of width
+        x_pos = int((current_step / max_steps) * width * 0.4) + 175
+
+        pygame.draw.rect(screen, (255, 0, 0), (x_pos, y_pos, stick_width, stick_height))
+        print(current_step, x_pos)
+        return current_step
 
     def __str__(self):
         # Ensure the epoch only updates when a full epoch is completed
