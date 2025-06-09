@@ -1,104 +1,76 @@
-import time
-import numpy as np
-import matplotlib.pyplot as plt
+def get_pings(self, age_counts, binge_percentages, fixed_drinker_counts):
+    results = {}
+    for age, count in age_counts.items():
+        num_drinkers = fixed_drinker_counts.get(age, 0)
+        binge_percentage = binge_percentages.get(age, 0)
 
-# Age-based parameters
-age_counts = {12: 4, 13: 4, 14: 4, 15: 3, 16: 3, 17: 3, 18: 3}
-binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        # Maak een array met booleans: wie vaste drinker is
+        is_drinker = np.zeros(count, dtype=bool)
+        is_drinker[:num_drinkers] = True
+        np.random.shuffle(is_drinker)
 
-# Simulation parameters
-num_steps = 24
-num_epochs = 1000
+        # Vul resistances voor drinkers willekeurig (los van agents)
+        resistance = np.zeros(count)
+        resistances = np.random.uniform(0.05, 0.95, size=num_drinkers)
+        np.random.shuffle(resistances)
 
-# Track results
-step_pings = {age: np.zeros((num_steps,)) for age in age_counts}
-ping_details = {age: [] for age in age_counts}
-players_pinged = {age: np.zeros((num_epochs, age_counts[age]), dtype=bool) for age in age_counts}
+        idx = 0
+        for i in range(count):
+            if is_drinker[i]:
+                resistance[i] = resistances[idx]
+                idx += 1
 
-# Simulation loop
-for epoch in range(num_epochs):
-    print(f"\n--- Epoch {epoch + 1} ---")
+        # Voeg ruis toe voor realisme
+        noise = np.random.normal(0, 2)
+        expected = int(round((binge_percentage / 100) * num_drinkers + noise))
+        expected = max(0, min(expected, num_drinkers))
+        results[age] = expected
+    return results
 
-    for age, player_count in age_counts.items():
-        print(f"\n  Age {age} with {player_count} players")
+def middelen_gebruiken(self, substance, pings):
+    for age, num_pings in pings.items():
+        if num_pings == 0:
+            continue
 
-        # Select resistance factors based on player count
-        if player_count == 3:
-            resistance_factors = np.array([0.5, 1.0, 1.5])
-        elif player_count == 4:
-            resistance_factors = np.array([0.5, 0.75, 1.25, 1.5])
+        # Filter agents op leeftijd en fixed gebruiker per stof
+        if substance == "alcohol":
+            fixed_users = [a for a in self.agents if a.age == age and a.fixed_drinker]
+            # Sorteer op alcohol_resistance
+            sorted_agents = sorted(fixed_users, key=lambda a: a.alcohol_resistance)
+        elif substance == "smoking":
+            fixed_users = [a for a in self.agents if a.age == age and a.fixed_smoker]
+            # Sorteer op smoking_resistance
+            sorted_agents = sorted(fixed_users, key=lambda a: a.smoking_resistance)
         else:
-            continue  # Skip invalid player counts
+            continue
 
-        # Binge percentage as ping probability
-        binge_prob = binge_percentages[age] / 100.0
+        candidates = []
+        for agent in sorted_agents:
+            if substance not in agent.substance_count:
+                agent.substance_count[substance] = 0
 
-        # Initialize pings for this epoch
-        epoch_pings = np.zeros((player_count, num_steps), dtype=bool)
+            if substance == "alcohol":
+                base_chance = 1 - agent.alcohol_resistance
+            else:
+                base_chance = 1 - agent.smoking_resistance
 
-        # Step-first loop
-        for step in range(num_steps):
-            for player in range(player_count):
-                # Adjust ping probability based on resistance
-                step_ping_prob = binge_prob / resistance_factors[player]
+            usage_factor = 1 + (agent.substance_count[substance] * 0.1)
+            chance = base_chance * usage_factor
+            candidates.append((agent, chance))
 
-                # Determine if the player pings at this step
-                if np.random.rand() < step_ping_prob:
-                    epoch_pings[player, step] = True
-                    players_pinged[age][epoch, player] = True
+        total_chance = sum(chance for _, chance in candidates)
+        if total_chance == 0:
+            continue
 
-                    # Store ping details
-                    ping_details[age].append((epoch + 1, player + 1, step + 1))
+        normalized = [(agent, chance / total_chance) for agent, chance in candidates]
+        selected_agents = np.random.choice(
+            [agent for agent, _ in normalized],
+            size=min(num_pings, len(normalized)),
+            replace=False,
+            p=[chance for _, chance in normalized]
+        )
 
-                # Print the ping status
-                status = 'True' if epoch_pings[player, step] else 'False'
-                print(f"      Player {player + 1} (Res: {resistance_factors[player]}): {status}")
-
-                time.sleep(0.01)  # Reduced sleep time for faster execution
-
-            # Accumulate pings per step
-            step_pings[age][step] += np.sum(epoch_pings[:, step])
-        print()
-
-# Compute statistics
-average_ping_per_step = {
-    age: step_pings[age] / (age_counts[age] * num_epochs) for age in age_counts
-}
-
-pinged_players_per_epoch = {
-    age: np.mean(players_pinged[age], axis=1) * 100 for age in age_counts
-}
-
-# Print results
-print("\n--- Step-wise Average Ping Probabilities ---")
-for age, probs in average_ping_per_step.items():
-    print(f"\nAge {age}:")
-    for step, prob in enumerate(probs):
-        print(f"  Step {step + 1}: {prob:.2%}")
-
-print("\n--- Overall Ping Statistics ---")
-for age in age_counts:
-    avg_pinged = np.mean(pinged_players_per_epoch[age])
-    print(f"Age {age}: {avg_pinged:.2f}% of players pinged at least once per epoch")
-
-# Plot step-wise ping probabilities
-plt.figure(figsize=(12, 6))
-for age, probs in average_ping_per_step.items():
-    plt.plot(range(1, num_steps + 1), probs, label=f'Age {age}')
-plt.axhline(y=0.66, color='red', linestyle='dashed', linewidth=2, label='Expected 66%')
-plt.xlabel('Step Index')
-plt.ylabel('Proportion of True Pings')
-plt.title(f'Ping Probability per Step Over {num_epochs} Epochs by Age')
-plt.legend()
-plt.show()
-
-# Plot distribution of players who pinged per epoch
-plt.figure(figsize=(12, 6))
-for age, data in pinged_players_per_epoch.items():
-    plt.hist(data, bins=20, alpha=0.6, label=f'Age {age}')
-plt.axvline(x=66, color='red', linestyle='dashed', linewidth=2, label='Expected 66%')
-plt.xlabel('Percentage of Players Who Pinged per Epoch')
-plt.ylabel('Frequency')
-plt.title(f'Distribution of Players Who Pinged Across {num_epochs} Epochs by Age')
-plt.legend()
-plt.show()
+        for agent in selected_agents:
+            agent.substance_count[substance] += 1
+            agent.action = f"used {substance}"
+            print(f"Agent {agent.name} (age {agent.age}) used {substance}.")

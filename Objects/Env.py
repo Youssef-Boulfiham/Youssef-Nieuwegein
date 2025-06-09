@@ -8,11 +8,13 @@ import pygame
 import time
 from PIL import Image
 from Objects.Agent import Agent
-from datetime import timedelta
+from datetime import timedelta, time
 
 
 class Env:
     def __init__(self, start_date, epochs, steps_per_day=4000, breakpoint_time=None):
+        self.rng = np.random.default_rng()  # Centrale Mersenne Twister RNG
+        self.rn = lambda: round(self.rng.uniform(0.01, 0.99), 5)  # Willekeurige waarde tussen 0.01 en 0.99
         self.activities = ["thuis", "school", "vriend thuis", "vrije tijd"]
         self.colors_activities = ["red", "green", "blue", "red dark"]
         self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
@@ -22,9 +24,21 @@ class Env:
         # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
         # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
         # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
-        self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
-        self.fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
+        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
+        # self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
+        # self.fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
+        self.substance_data = {
+            "alcohol": {
+                "age_counts": {age: 10 for age in range(12, 19)},
+                "percentages": {12: 0.8, 13: 2.5, 14: 5.5, 15: 13, 16: 37, 17: 50, 18: 88},
+                "fixed_counts": {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10},
+            },
+            "roken": {
+                "age_counts": {age: 10 for age in range(12, 19)},
+                "percentages": {12: 0.5, 13: 1.2, 14: 4.0, 15: 9.1, 16: 30, 17: 45, 18: 72},
+                "fixed_counts": {12: 5, 13: 5, 14: 6, 15: 6, 16: 7, 17: 8, 18: 9},
+            }
+        }
         self.colors = {
             "black": (0, 0, 0),
             "white": (255, 255, 255),
@@ -36,7 +50,7 @@ class Env:
             "vriend thuis": (155, 0, 0)
         }
         self.root = Path(__file__).parent.parent
-        self.agents_count = sum(self.age_counts.values())
+        self.agents_count = sum(self.substance_data["alcohol"]["age_counts"].values())
         self.cursor_zooms = [1.0, 2.0, 4.0]
         self.cursor_zoom = 1.0
         self.cursor_size = 10
@@ -141,108 +155,73 @@ class Env:
             self.clock.tick(60)
         pygame.quit()
 
-    def middelen_gebruiken(self):
-        pings = self.get_pings()  # {age: number_of_drinkers_this_epoch}
-
-        for age, num_pings in pings.items():
-            if num_pings == 0:
-                continue
-
-            # Select all agents of this age with fixed_drinker = True
-            fixed_drinkers = [agent for agent in self.agents if agent.age == age and agent.fixed_drinker]
-
-            if not fixed_drinkers:
-                continue
-
-            # Sorteer op weerstand (laagste eerst)
-            sorted_agents = sorted(fixed_drinkers, key=lambda a: a.resistance)
-
-            # Stel een kansmodel op: hoe lager weerstand en hoe hoger gebruik, hoe groter de kans
-            candidates = []
-            for agent in sorted_agents:
-                # Gebruik een basiswaarde (bijv. 1 - weerstand), en verhoog met gebruiksfrequentie
-                base_chance = 1 - agent.resistance
-                usage_factor = 1 + (agent.substance_count * 0.1)  # Elke eerdere keer verhoogt kans met 10%
-                chance = base_chance * usage_factor
-                candidates.append((agent, chance))
-
-            # Normaliseer kansen
-            total_chance = sum(chance for _, chance in candidates)
-            if total_chance == 0:
-                continue
-
-            normalized = [(agent, chance / total_chance) for agent, chance in candidates]
-
-            # Kies agents op basis van genormaliseerde kansen
-            selected_agents = np.random.choice(
-                [agent for agent, _ in normalized],
-                size=min(num_pings, len(normalized)),
-                replace=False,
-                p=[chance for _, chance in normalized]
-            )
-
-            for agent in selected_agents:
-                agent.substance_count += 1
-                # TODO
-                agent.action = "substance use"
-                print(f"Agent {agent.name} (age {agent.age}) used a substance.")
-
-        print()
-        return 0
-
-    def get_pings(self):
-        """
-        Returns a dictionary {age: number_of_drinkers_this_epoch} for the given epoch.
-        geeft drinkers terug
-        """
-        age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
-        binge_percentages = {12: 0.8, 13: 2.5, 14: 5.5, 15: 13, 16: 37, 17: 50, 18: 88}
-        fixed_drinker_counts = {12: 3, 13: 3, 14: 3, 15: 3, 16: 4, 17: 4, 18: 5}
-        fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
+    def get_pings(self, substance_data):
         results = {}
+        for age, count in substance_data["age_counts"].items():
+            num_users = substance_data["fixed_counts"].get(age, 0)
+            binge_percentage = substance_data["percentages"].get(age, 0)
 
-        for age, count in age_counts.items():
-            num_drinkers = fixed_drinker_counts[age]
-            binge_percentage = binge_percentages[age]
+            is_user = np.zeros(count, dtype=bool)
+            is_user[:num_users] = True
+            np.random.shuffle(is_user)
 
-            # Willekeurige drinkers aanwijzen
-            is_drinker = np.zeros(count, dtype=bool)
-            is_drinker[:num_drinkers] = True
-            np.random.shuffle(is_drinker)
-
-            # Weerstand toekennen aan drinkers
             resistance = np.zeros(count)
-            resistances = np.random.uniform(0.05, 0.95, size=num_drinkers)
+            resistances = np.random.uniform(0.05, 0.95, size=num_users)
             np.random.shuffle(resistances)
 
-            index = 0
+            idx = 0
             for i in range(count):
-                if is_drinker[i]:
-                    resistance[i] = resistances[index]
-                    index += 1
+                if is_user[i]:
+                    resistance[i] = resistances[idx]
+                    idx += 1
 
-            # Genereer één ping-waarde voor deze epoch
-            # Voeg ruis toe aan het percentage
-            adjusted_percentage = max(0, min(binge_percentage + np.random.normal(0, 1.5), 100))
-            mean_total_pings = adjusted_percentage / 100 * num_drinkers
-            std_dev = max(1, mean_total_pings * np.random.uniform(0.08, 0.15))
-
-            # Genereer waarde voor deze specifieke epoch
-            # GAUSSIAN DISTRIBUTION
-            ping_value = int(np.random.normal(mean_total_pings, std_dev))
-            ping_value = max(0, min(ping_value, num_drinkers))
-
-            if ping_value > 0:
-                drinker_indices = np.where(is_drinker)[0]
-                weights = np.array([1.0 - resistance[i] for i in drinker_indices])
-                weights /= weights.sum()
-                selected = np.random.choice(drinker_indices, ping_value, replace=False, p=weights)
-                results[age] = len(selected)
-            else:
-                results[age] = 0
-
+            noise = np.random.normal(0, 2)
+            expected = int(round((binge_percentage / 100) * num_users + noise))
+            expected = max(0, min(expected, num_users))
+            results[age] = expected
         return results
+
+    def middelen_gebruiken(self):
+        for substance in ["alcohol", "roken"]:
+            pings = self.get_pings(self.substance_data[substance])
+            for age, num_pings in pings.items():
+                if num_pings == 0:
+                    continue
+
+                fixed_attr = f"fixed_{substance if substance == 'roken' else substance}"  # 'fixed_drinker' of 'fixed_smoker'
+                resistance_attr = f"{substance}_resistance"  # bv 'alcohol_resistance' of 'smoking_resistance'
+                count_attr = f"{substance}_count"  # bv 'alcohol_count' of 'smoking_count'
+
+                fixed_users = [a for a in self.agents if a.age == age and getattr(a, fixed_attr)]
+                sorted_agents = sorted(fixed_users, key=lambda a: getattr(a, resistance_attr))
+
+                candidates = []
+                for agent in sorted_agents:
+                    # Init count attribuut als nog niet aanwezig
+                    if not hasattr(agent, count_attr):
+                        setattr(agent, count_attr, 0)
+                    base_chance = 1 - getattr(agent, resistance_attr)
+                    usage_count = getattr(agent, count_attr)
+                    usage_factor = 1 + (usage_count * 0.1)
+                    chance = base_chance * usage_factor
+                    candidates.append((agent, chance))
+
+                total_chance = sum(chance for _, chance in candidates)
+                if total_chance == 0:
+                    continue
+
+                normalized = [(agent, chance / total_chance) for agent, chance in candidates]
+                selected_agents = np.random.choice(
+                    [agent for agent, _ in normalized],
+                    size=min(num_pings, len(normalized)),
+                    replace=False,
+                    p=[chance for _, chance in normalized]
+                )
+
+                for agent in selected_agents:
+                    setattr(agent, count_attr, getattr(agent, count_attr) + 1)
+                    agent.action = f"{substance}"
+                    print(f"Agent {agent.name} (age {agent.age}) used {substance}.")
 
     def set_agents_actions_false(self):
         for agent in self.agents:
@@ -366,29 +345,63 @@ class Env:
         self.clamp()
 
     def draw_step_info(self):
-        """Draws step information including time progression."""
-        date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
-        font = pygame.font.Font(None, 36)
+        """Draws step info including date and substance activity."""
 
-        # Calculate the current step in the day
-        step_in_day = self.step_current
-        step_text = f"Step: {step_in_day}"
-        week_text = f"Date: {date_format}"
+        # Format time and date
+        if hasattr(self, "time_current"):
+            time_string = self.time_current.strftime("%H:%M")
+        else:
+            time_string = "08:00"
 
-        step_surface = font.render(step_text, True, (255, 255, 255))
-        week_surface = font.render(week_text, True, (255, 255, 255))
+        weekday = self.date_current.strftime("%A").lower()
+        day = self.date_current.strftime("%d").lstrip("0")
+        month = self.date_current.strftime("%B").lower()
+        year = self.date_current.strftime("%Y")
+        date_line = f"{time_string} {weekday} {day} {month} {year}"
 
-        base_width = 230
-        box_width = int(base_width * 1.25)
-        box_height = step_surface.get_height() + week_surface.get_height() + 30
+        # Placeholder activity/substance line
+        activity_line = "alcohol: 12 | nicotine: 5 | cannabis: 2"
+
+        # Font and rendering
+        font = pygame.font.Font(None, 28)
+        line1_surface = font.render(date_line, True, (255, 255, 255))
+        line2_surface = font.render(activity_line, True, (255, 255, 255))
+
+        # Box size
+        padding = 10
         box_x, box_y = 10, 10
-        text_x = box_x + 10
-        step_y = box_y + 10
-        week_y = step_y + step_surface.get_height() + 10
+        box_width = max(line1_surface.get_width(), line2_surface.get_width()) + 2 * padding
+        box_height = line1_surface.get_height() + line2_surface.get_height() + 3 * padding
 
+        # Draw
         pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
-        self.screen.blit(step_surface, (text_x, step_y))
-        self.screen.blit(week_surface, (text_x, week_y))
+        self.screen.blit(line1_surface, (box_x + padding, box_y + padding))
+        self.screen.blit(line2_surface, (box_x + padding, box_y + line1_surface.get_height() + 2 * padding))
+
+    # def draw_step_info(self):
+    #     """Draws step information including time progression."""
+    #     date_format = self.date_current.strftime('%d %B %Y').lstrip("0")
+    #     font = pygame.font.Font(None, 36)
+    #
+    #     # Calculate the current step in the day
+    #     step_in_day = self.step_current
+    #     step_text = f"Step: {step_in_day}"
+    #     week_text = f"Date: {date_format}"
+    #
+    #     step_surface = font.render(step_text, True, (255, 255, 255))
+    #     week_surface = font.render(week_text, True, (255, 255, 255))
+    #
+    #     base_width = 230
+    #     box_width = int(base_width * 1.25)
+    #     box_height = step_surface.get_height() + week_surface.get_height() + 30
+    #     box_x, box_y = 10, 10
+    #     text_x = box_x + 10
+    #     step_y = box_y + 10
+    #     week_y = step_y + step_surface.get_height() + 10
+    #
+    #     pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
+    #     self.screen.blit(step_surface, (text_x, step_y))
+    #     self.screen.blit(week_surface, (text_x, week_y))
 
     def zoom(self, direction):
         """Zoom in/out at the cursor's current position."""
@@ -493,43 +506,72 @@ class Env:
 
     import numpy as np
 
+    import numpy as np
+
+
     def get_agents(self):
-        agents = []  # Store agents in a list
-        agent_counter = 0  # To keep track of agent names from 0 to total count
-        fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
+        agents = []
 
-        for age, count in self.age_counts.items():  # Loop through age and count
-            resistance_levels = np.linspace(0.01, 0.99, count)
-            fixed_drinker_limit = fixed_drinker_counts.get(age, 0)
-            fixed_drinker_assigned = 0  # Keep track of how many have been assigned
+        names =  list(range(sum(self.substance_data["alcohol"]["age_counts"].values())))
 
-            for resistance in resistance_levels:
-                fixed_drinker = False
-                if fixed_drinker_assigned < fixed_drinker_limit:
-                    fixed_drinker = True
-                    fixed_drinker_assigned += 1
+
+        name_index = 0
+        age_counts = self.substance_data["alcohol"]["age_counts"]
+        fixed_drinker_counts = self.substance_data["alcohol"]["fixed_counts"]
+        fixed_smoker_counts = self.substance_data["roken"]["fixed_counts"]
+
+        for age in range(12, 19):
+            count = age_counts.get(age, 0)
+            num_drinkers = fixed_drinker_counts.get(age, 0)
+            num_smokers = fixed_smoker_counts.get(age, 0)
+
+            indices = list(range(count))
+            self.rng.shuffle(indices)
+
+            drinker_ids = set(self.rng.choice(indices, size=num_drinkers, replace=False))
+            smoker_ids = set(self.rng.choice(indices, size=num_smokers, replace=False))
+
+            for i in range(count):
+                fixed_drinker = i in drinker_ids
+                fixed_smoker = i in smoker_ids
+
+                alcohol_resistance = self.rn()
+                smoking_resistance = self.rn()
 
                 agents.append(Agent(
-                    name=agent_counter,
+                    name=names[name_index],
                     age=age,
                     fixed_drinker=fixed_drinker,
-                    resistance=resistance,
+                    fixed_smoker=fixed_smoker,
+                    alcohol_resistance=alcohol_resistance,
+                    smoking_resistance=smoking_resistance,
                     positions_color=self.activity_colors,
                     root=self.root,
-                    agents_count=self.agents_count,
+                    agents_count=70,
                     positions=self.positions,
                     activities=self.activities,
                     collisions=self.collisions
                 ))
-                agent_counter += 1
+
+                name_index += 1
+
+        return agents
 
         return agents
 
     def set_time(self):
         self.step += 1
-        self.step_current = self.step % self.steps_per_day  # Compute current step first
-        days_elapsed = self.step // self.steps_per_day  # Compute elapsed days
-        self.date_current = self.start_date + timedelta(days=days_elapsed)  # Update date
+        self.step_current = self.step % self.steps_per_day
+        days_elapsed = self.step // self.steps_per_day
+        self.date_current = self.start_date + timedelta(days=days_elapsed)
+
+        # Time between 08:00 and 21:00
+        steps_per_hour = self.steps_per_day / 13  # From 08:00 to 21:00 = 13 hours
+        hour_offset = self.step_current / steps_per_hour
+        hour = int(8 + hour_offset)
+        minute = int((hour_offset % 1) * 60)
+
+        self.time_current = time(hour % 24, minute)
 
     def check_breakpoint(self):
         if self.breakpoint_time and self.date_current >= self.breakpoint_time:
@@ -550,7 +592,7 @@ class Env:
         x_pos = int((current_step / max_steps) * width * 0.4) + 175
 
         pygame.draw.rect(screen, (255, 0, 0), (x_pos, y_pos, stick_width, stick_height))
-        print(current_step, x_pos)
+        # print(current_step, x_pos)
         return current_step
 
     def __str__(self):
@@ -574,4 +616,3 @@ class Env:
         # Save the image
         save_path = self.root / "Data" / "Input" / f"{activity}.png"
         img.save(save_path)
-        print(f"Plot saved: {save_path}")

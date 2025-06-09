@@ -14,7 +14,7 @@ import ast
 
 class Agent:
 
-    def __init__(self, name, age, fixed_drinker, resistance, positions_color, root, agents_count, positions, activities, collisions):
+    def __init__(self, name, age, fixed_drinker, fixed_smoker, alcohol_resistance, smoking_resistance, positions_color, root, agents_count, positions, activities, collisions):
         # self.agents_count = agents_count
         self.positions = positions
         self.root = root
@@ -30,9 +30,12 @@ class Agent:
         self.name = name
         self.age = age
         # TODO: volgende is voor middelen gebruiken
-        self.fixed_drinker = fixed_drinker
-        self.resistance = resistance
-        self.substance_count = 0
+        self.fixed_alcohol = fixed_drinker  # Of deze agent altijd drinkt
+        self.fixed_roken = fixed_smoker  # Of deze agent altijd rookt
+        self.alcohol_resistance = alcohol_resistance  # Weerstand tegen alcoholgebruik
+        self.roken_resistance = smoking_resistance  # Weerstand tegen rookgedrag
+        self.alcohol_count = 0  # Aantal keren alcohol gebruikt
+        self.roken_count = 0  # Aantal keren gerookt
 
         self.activity = random.choice(self.activities)
         self.position_current = random.choice(self.positions[self.activity])
