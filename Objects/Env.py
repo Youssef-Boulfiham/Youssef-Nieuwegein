@@ -5,28 +5,56 @@ import random
 import os
 import numpy as np
 import pygame
-import time
 from PIL import Image
 from Objects.Agent import Agent
-from datetime import timedelta, time
-
+from datetime import timedelta, time as dt_time, datetime
+import time
 
 class Env:
-    def __init__(self, start_date, epochs, steps_per_day=4000, breakpoint_time=None):
-        self.rng = np.random.default_rng()  # Centrale Mersenne Twister RNG
-        self.rn = lambda: round(self.rng.uniform(0.01, 0.99), 5)  # Willekeurige waarde tussen 0.01 en 0.99
-        self.activities = ["thuis", "school", "vriend thuis", "vrije tijd"]
-        self.colors_activities = ["red", "green", "blue", "red dark"]
-        self.activity_colors = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
-        self.name_activity = {}
-        self.action = False
-        self.activity = "idle"
-        # self.age_counts = {12: 1, 13: 0, 14: 0, 15: 0, 16: 0, 17: 0, 18: 0}
-        # self.age_counts = {12: 1, 13: 1, 14: 1, 15: 1, 16: 1, 17: 1, 18: 1}
-        # self.age_counts = {12: 5, 13: 5, 14: 5, 15: 5, 16: 5, 17: 5, 18: 5}
-        # self.age_counts = {12: 10, 13: 10, 14: 10, 15: 10, 16: 10, 17: 10, 18: 10}
-        # self.binge_percentages = {12: 1, 13: 3, 14: 6, 15: 14, 16: 36, 17: 48, 18: 86}
-        # self.fixed_drinker_counts = {12: 6, 13: 6, 14: 6, 15: 6, 16: 8, 17: 8, 18: 10}
+    def __init__(self, start_date, epochs, steps_per_day=4000):
+        #
+        # self.action_display = False
+        # self.rng = np.random.default_rng()  # Centrale Mersenne Twister RNG
+        # self.rn = lambda: round(self.rng.uniform(0.01, 0.99), 5)  # get rn
+        # self.root = Path(__file__).parent.parent
+        # self.cursor_zooms = [1.0, 2.0, 4.0]
+        # self.cursor_zoom = 1.0
+        # self.cursor_size = 10
+        # self.cursor_step = 10
+        # self.cursor_color = (255, 0, 0)
+        # self.cursor_offset = [0, 0]
+        # self.pictogram_cache = {}  # Cache for loaded pictograms
+        # self.textbox_color = (181, 101, 29, 128)  # Textbox color with transparency
+        # self.pictogram_size = (20, 20)  # Fixed pictogram size
+        # pygame
+        pygame.init()
+        pygame.display.set_caption("Omgeving Simulatie")
+        self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_background.png"))
+        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_raster.png"))
+        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_activity.png"))
+        self.width, self.lenght = self.background.get_size()
+        self.cursor_position = [self.width // 2, self.lenght // 2]
+        self.screen = pygame.display.set_mode((self.width, self.lenght))
+        self.clock = pygame.time.Clock()
+        # env
+        # TODO: clean code van
+        self.colors_domains = {"thuis": "red", "vrije tijd": "blue", "school": "green", "vriend thuis": "red dark"}
+        self.colors = {
+            "black": (0, 0, 0),
+            "white": (255, 255, 255),
+            "thuis": (255, 0, 0),
+            "school": (0, 255, 0),
+            "vrije tijd": (0, 0, 255),
+            "grey": (128, 128, 128),
+            "brown": (143, 110, 26),
+            "vriend thuis": (155, 0, 0)
+        }
+        # TODO: tot
+        self.collisions = self.set_collision()  # TODO door pasen aan pathfinding
+        # agent
+        self.domain = ["thuis", "school", "vriend thuis", "vrije tijd"]
+        self.positions = self.get_positions()
+        self.action = "idle"
         self.substance_data = {
             "alcohol": {
                 "age_counts": {age: 10 for age in range(12, 19)},
@@ -39,45 +67,12 @@ class Env:
                 "fixed_counts": {12: 5, 13: 5, 14: 6, 15: 6, 16: 7, 17: 8, 18: 9},
             }
         }
-        self.colors = {
-            "black": (0, 0, 0),
-            "white": (255, 255, 255),
-            "thuis": (255, 0, 0),
-            "school": (0, 255, 0),
-            "vrije tijd": (0, 0, 255),
-            "grey": (128, 128, 128),
-            "brown": (143, 110, 26),
-            "vriend thuis": (155, 0, 0)
-        }
-        self.root = Path(__file__).parent.parent
         self.agents_count = sum(self.substance_data["alcohol"]["age_counts"].values())
-        self.cursor_zooms = [1.0, 2.0, 4.0]
-        self.cursor_zoom = 1.0
-        self.cursor_size = 10
-        self.cursor_step = 10
-        self.cursor_color = (255, 0, 0)
-        self.cursor_offset = [0, 0]
-        self.pictogram_cache = {}  # Cache for loaded pictograms
-        self.textbox_color = (181, 101, 29, 128)  # Textbox color with transparency
-        self.pictogram_size = (20, 20)  # Fixed pictogram size
-        # pygame
-        pygame.init()
-        pygame.display.set_caption("Omgeving Simulatie")
-        self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_background.png"))
-        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_raster.png"))
-        # self.background = pygame.image.load(os.path.join(self.root, "graphics", "enviroment_activity.png"))
-        self.width, self.lenght = self.background.get_size()
-        self.cursor_position = [self.width // 2, self.lenght // 2]
-        self.screen = pygame.display.set_mode((self.width, self.lenght))
-        self.clock = pygame.time.Clock()
-        #
-        self.collisions = self.set_collision()  # TODO door pasen aan pathfinding
-        self.positions = self.get_positions()
-        # agent
         self.agents = self.get_agents()
         self.image_agent = pygame.image.load(str(self.root / "graphics" / "Agent_front.png")).convert_alpha()
         self.image_agent_width, self.image_agent_height = self.image_agent.get_size()
         self.font = pygame.font.Font(None, 24)  # Load font once
+
         # step
         self.epochs = epochs
         self.steps_per_day = steps_per_day
@@ -88,6 +83,7 @@ class Env:
         # time
         self.start_date = start_date
         self.date_current = start_date
+        # self.run_setup_menu()
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -108,51 +104,50 @@ class Env:
             self.draw_cursor()
             self.draw_background()
             #
-            self.activity = "idle"
+            self.action = "idle"
             if self.step_current == 0:
-                self.activity = "activiteit_kiezen"
+                self.action = "activiteit_kiezen"
             elif self.step_current == 1000:
-                self.activity = "vrienden_maken"
-                self.activities_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
+                self.action = "vrienden_maken"
+                self.domain_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
             elif self.step_current == 1250:
                 self.vrienden_maken()
-                self.action = True
+                self.action_display = True
             elif self.step_current == 1500:
                 self.set_agents_actions_false()
-                self.action = False
-                self.activity = "middelen_gebruiken"
+                self.action_display = False
+                self.action = "middelen_gebruiken"
                 self.middelen_gebruiken()
             elif self.step_current == 1550:
-                self.action = True
+                self.action_display = True
             elif self.step_current == 2000:
                 self.set_agents_actions_false()
                 self.step_current = False
-                self.activity = "activiteit_kiezen"
+                self.action = "activiteit_kiezen"
             elif self.step_current == 3000:
-                self.activity = "vrienden_maken"
-                self.activities_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
+                self.action = "vrienden_maken"
+                self.domain_agents_names, self.agents_positions_pairs = self.get_positions_pairs()
             elif self.step_current == 3250:
                 self.vrienden_maken()
-                self.action = True
+                self.action_display = True
             elif self.step_current == 3500:
                 self.set_agents_actions_false()
-                self.action = False
-                # self.activity = "middelen_gebruiken"
+                self.action_display = False
+                # self.action = "middelen_gebruiken"
                 #     # self.middelen_gebruiken()
             for agent in self.agents:
                 agent_position_end = None
-                if self.activity == "vrienden_maken":
+                if self.action == "vrienden_maken":
                     agent_position_end = self.agents_positions_pairs.get(agent.name, agent.position_current)
-                agent.step(self.activity, agent_position_end)
+                agent.step(self.action, agent_position_end)
                 self.draw_agent(agent.position_current)
                 self.draw_textbox(agent.position_current, text=f"", action=agent.action)
             self.draw_step_info()
             self.draw_progress_cursor(self.screen, self.step_current, 2000, self.width, self.lenght)
-            # print(self)
             self.set_time()
             #
             pygame.display.flip()
-            self.clock.tick(60)
+            self.clock.tick(30)
         pygame.quit()
 
     def get_pings(self, substance_data):
@@ -230,7 +225,7 @@ class Env:
     def draw_textbox(self, position, text, action):
         # Ensure text is a string and check if there's anything to display
         text = str(text).strip()
-        show_pictogram = self.action and bool(action)
+        show_pictogram = self.action_display and bool(action)
 
         if not text and not show_pictogram:
             return  # Nothing to display
@@ -274,7 +269,7 @@ class Env:
 
     def get_positions(self):
         positions_activity = {}
-        for activity in self.activities:
+        for activity in self.domain:
             activity_position = self.collisions[f"['{activity}']"]
             y_groups = defaultdict(list)
             for y in range(self.lenght):
@@ -303,20 +298,16 @@ class Env:
         for agent in self.agents:
             if agent.activity != "thuis":
                 activities_agents_names[agent.activity].append(agent.name)
-
         agents_positions_pairs = {}
         for activity, agent_names in activities_agents_names.items():
             for i in range(0, len(agent_names) & ~1, 2):
-                # print(self.positions[activity][i], self.positions[activity][i + 1])
                 agents_positions_pairs[agent_names[i]] = self.positions[activity][i]
                 agents_positions_pairs[agent_names[i + 1]] = self.positions[activity][i + 1]
         return activities_agents_names, agents_positions_pairs
 
     def vrienden_maken(self):
-        friendship_status = {}
-        for activity, agent_names in self.activities_agents_names.items():
+        for activity, agent_names in self.domain_agents_names.items():
             for i in range(0, len(agent_names) & ~1, 2):
-                # print(activity, agent_names[i], agent_names[i + 1])
                 agent_left = self.agents[agent_names[i]]
                 agent_right = self.agents[agent_names[i + 1]]
 
@@ -327,13 +318,6 @@ class Env:
                     agent_left.friends.append(agent_right.name)
                     agent_right.friends.append(agent_left.name)
                     agent_left.action, agent_right.action = "checkmark", "checkmark"
-                    # friendship_status[agent_left.name] = True
-                    # friendship_status[agent_right.name] = True
-                    # print(f"{agent_left.name} and {agent_right.name} became friends!")
-                # else:
-                    # friendship_status[agent_left.name] = False
-                    # friendship_status[agent_right.name] = False
-        # return friendship_status
 
     def move_cursor(self, dx, dy):
         """Move the camera (background) instead of the cursor."""
@@ -345,8 +329,6 @@ class Env:
         self.clamp()
 
     def draw_step_info(self):
-        """Draws step info including date and substance activity."""
-
         # Format time and date
         if hasattr(self, "time_current"):
             time_string = self.time_current.strftime("%H:%M")
@@ -359,24 +341,36 @@ class Env:
         year = self.date_current.strftime("%Y")
         date_line = f"{time_string} {weekday} {day} {month} {year}"
 
-        # Placeholder activity/substance line
+        # Activity/substance line
         activity_line = "alcohol: 12 | nicotine: 5 | cannabis: 2"
 
-        # Font and rendering
+        # Step line
+        step_line = f"step: {self.step_current} / {self.step}"
+
+        # Font setup
         font = pygame.font.Font(None, 28)
-        line1_surface = font.render(date_line, True, (255, 255, 255))
-        line2_surface = font.render(activity_line, True, (255, 255, 255))
+        surfaces = [
+            font.render(date_line, True, (255, 255, 255)),
+            font.render(activity_line, True, (255, 255, 255)),
+            font.render(step_line, True, (255, 255, 255))
+        ]
 
-        # Box size
+        # Calculate box dimensions
         padding = 10
+        line_spacing = 5
         box_x, box_y = 10, 10
-        box_width = max(line1_surface.get_width(), line2_surface.get_width()) + 2 * padding
-        box_height = line1_surface.get_height() + line2_surface.get_height() + 3 * padding
+        box_width = max(surface.get_width() for surface in surfaces) + 2 * padding
+        box_height = sum(surface.get_height() for surface in surfaces) + (len(surfaces) + 1) * padding + (
+                    len(surfaces) - 1) * line_spacing
 
-        # Draw
+        # Draw background box
         pygame.draw.rect(self.screen, (139, 69, 19), (box_x, box_y, box_width, box_height), border_radius=10)
-        self.screen.blit(line1_surface, (box_x + padding, box_y + padding))
-        self.screen.blit(line2_surface, (box_x + padding, box_y + line1_surface.get_height() + 2 * padding))
+
+        # Blit lines
+        y = box_y + padding
+        for surface in surfaces:
+            self.screen.blit(surface, (box_x + padding, y))
+            y += surface.get_height() + line_spacing
 
     # def draw_step_info(self):
     #     """Draws step information including time progression."""
@@ -477,6 +471,7 @@ class Env:
 
     def set_collision(self):
         """voor pathfinding"""
+        # TODO: comprihension moet automatisch
         activity_combinations = [['thuis'], ['school'], ['vrije tijd'], ['vriend thuis'],
                                  ['thuis', 'black', 'school'],
                                  ['thuis', 'black', 'vrije tijd'],
@@ -503,10 +498,6 @@ class Env:
                         sprite[y, x] = 1
             colissions[f"{activity}"] = sprite
         return colissions
-
-    import numpy as np
-
-    import numpy as np
 
 
     def get_agents(self):
@@ -545,17 +536,15 @@ class Env:
                     fixed_smoker=fixed_smoker,
                     alcohol_resistance=alcohol_resistance,
                     smoking_resistance=smoking_resistance,
-                    positions_color=self.activity_colors,
+                    positions_color=self.colors_domains,
                     root=self.root,
                     agents_count=70,
                     positions=self.positions,
-                    activities=self.activities,
+                    activities=self.domain,
                     collisions=self.collisions
                 ))
 
                 name_index += 1
-
-        return agents
 
         return agents
 
@@ -571,14 +560,14 @@ class Env:
         hour = int(8 + hour_offset)
         minute = int((hour_offset % 1) * 60)
 
-        self.time_current = time(hour % 24, minute)
+        self.time_current = dt_time(hour % 24, minute)
 
     def check_breakpoint(self):
         if self.breakpoint_time and self.date_current >= self.breakpoint_time:
             print(self)  # Trigger __str__ method if breakpoint is reached
 
     # def __repr__(self):
-    # return f"{self.step_counter}, '{self.activity}'"
+    # return f"{self.step_counter}, '{self.action}'"
 
     def draw_progress_cursor(self, screen, current_step, max_steps, width, height):
         stick_height = 34
@@ -602,17 +591,122 @@ class Env:
         return f"{date_str} | step current: {self.step_current} | step: {self.step} | epoch:{current_epoch}"
 
     def plot_positions(self, activity, positions):
-        """Plots the given positions on a 500x700 grid with numbered labels using Pillow."""
+        """Plots positions with numbered labels and pair-based background colors using rainbow palette."""
         img = Image.new("RGB", (self.width, self.lenght), "white")
         draw = ImageDraw.Draw(img)
 
-        # Load default font
-        font = ImageFont.load_default()
+        # Load a high-quality font for sharper text
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", size=24)  # Adjust size if needed
+        except IOError:
+            font = ImageFont.load_default()
 
-        # Draw numbers at each position
+        # Instelbare marges voor achtergrondvlakken
+        horizontal_margin = 10
+        vertical_margin = 8
+
+        rainbow_colors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"]
+
+        for i in range(0, len(positions), 2):
+            if i + 1 >= len(positions):
+                break
+
+            (x1, y1), (x2, y2) = positions[i], positions[i + 1]
+
+            left = min(x1, x2) - horizontal_margin
+            right = max(x1, x2) + horizontal_margin
+            top = min(y1, y2) - vertical_margin
+            bottom = max(y1, y2) + vertical_margin
+
+            color = rainbow_colors[(i // 2) % len(rainbow_colors)]
+            draw.rectangle([left, top, right, bottom], fill=color)
+
         for i, (x, y) in enumerate(positions):
             draw.text((x, y), str(i + 1), fill="black", font=font, anchor="mm")
 
-        # Save the image
         save_path = self.root / "Data" / "Input" / f"{activity}.png"
-        img.save(save_path)
+        img.save(save_path, dpi=(300, 300))
+
+    def run_setup_menu(self):
+        input_active = None
+        input_fields = {
+            "start_step": {"value": "0", "rect": pygame.Rect(100, 100, 200, 32)},
+            "start_date": {"value": "2024-01-01", "rect": pygame.Rect(100, 150, 200, 32)},
+        }
+        age_inputs = {
+            age: {"value": str(self.substance_data["alcohol"]["age_counts"][age]),
+                  "rect": pygame.Rect(100 + (age - 12) * 80, 250, 70, 32)}
+            for age in range(12, 19)
+        }
+
+        font = pygame.font.Font(None, 28)
+        done = False
+
+        while not done:
+            self.screen.fill((30, 30, 30))
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    input_active = None
+                    for key, field in input_fields.items():
+                        if field["rect"].collidepoint(event.pos):
+                            input_active = key
+                    for age, field in age_inputs.items():
+                        if field["rect"].collidepoint(event.pos):
+                            input_active = age
+                elif event.type == pygame.KEYDOWN and input_active is not None:
+                    if event.key == pygame.K_RETURN:
+                        input_active = None
+                    elif event.key == pygame.K_BACKSPACE:
+                        if input_active in input_fields:
+                            input_fields[input_active]["value"] = input_fields[input_active]["value"][:-1]
+                        else:
+                            age_inputs[input_active]["value"] = age_inputs[input_active]["value"][:-1]
+                    else:
+                        char = event.unicode
+                        if input_active in input_fields:
+                            input_fields[input_active]["value"] += char
+                        elif isinstance(input_active, int):
+                            age_inputs[input_active]["value"] += char
+
+            # Draw input boxes
+            for key, field in input_fields.items():
+                pygame.draw.rect(self.screen, (255, 255, 255), field["rect"], 2)
+                text_surface = font.render(field["value"], True, (255, 255, 255))
+                self.screen.blit(text_surface, (field["rect"].x + 5, field["rect"].y + 5))
+
+            self.screen.blit(font.render("Start Step:", True, (255, 255, 255)), (10, 100))
+            self.screen.blit(font.render("Start Date (YYYY-MM-DD):", True, (255, 255, 255)), (10, 150))
+            self.screen.blit(font.render("Agents per Age:", True, (255, 255, 255)), (10, 200))
+
+            for age, field in age_inputs.items():
+                pygame.draw.rect(self.screen, (255, 255, 255), field["rect"], 2)
+                text_surface = font.render(f"{age}: {field['value']}", True, (255, 255, 255))
+                self.screen.blit(text_surface, (field["rect"].x + 5, field["rect"].y + 5))
+
+            # Draw start button
+            start_button = pygame.Rect(100, 320, 160, 40)
+            pygame.draw.rect(self.screen, (0, 120, 0), start_button)
+            self.screen.blit(font.render("Start Simulation", True, (255, 255, 255)), (110, 330))
+
+            if pygame.mouse.get_pressed()[0] and start_button.collidepoint(pygame.mouse.get_pos()):
+                # Apply user inputs
+                self.start_step = int(input_fields["start_step"]["value"])
+                self.step = self.start_step
+                self.step_current = self.step % self.steps_per_day
+                try:
+                    self.start_date = pygame.time.strptime(input_fields["start_date"]["value"], "%Y-%m-%d")
+                    self.start_date = time.strptime(input_fields["start_date"]["value"], "%Y-%m-%d")
+                    self.start_date = datetime.strptime(input_fields["start_date"]["value"], "%Y-%m-%d").date()
+                except:
+                    self.start_date = datetime.strptime(input_fields["start_date"]["value"], "%Y-%m-%d").date()
+
+                self.substance_data["alcohol"]["age_counts"] = {
+                    age: max(0, int(field["value"])) for age, field in age_inputs.items()
+                }
+                done = True
+
+            pygame.display.flip()
+            self.clock.tick(30)
